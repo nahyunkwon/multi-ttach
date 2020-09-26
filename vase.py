@@ -22,7 +22,7 @@ def get_center_point():
             first_layer = first_layer + l
         elif flag == "skin":
             break
-
+    #print(first_layer)
     lines = first_layer.split("\n")
     # first point
     first_x = float(lines[1].split(" ")[2].split("X")[1])  # x coordinate
@@ -69,7 +69,7 @@ def modifying_gcode():
     flag = "no"
 
     result = ""
-    '''
+
     for l in lines:
         #result = result+l
         if ";TYPE:WALL-OUTER" in l:
@@ -91,33 +91,33 @@ def modifying_gcode():
                 if "X" in splited[i]:
                     current_x = float(splited[i].split("X")[1])
                     direction_vector_x = current_x - center_point[0]
-                    new_x = str(current_x + (direction_vector_x * random.randint(100, 130) / 100))
+                    new_x = str(center_point[0] + (direction_vector_x * random.randint(100, 105) / 100))
                     break
             for j in range(len(splited)):
                 if "Y" in splited[j]:
                     current_y = float(splited[j].split("Y")[1])
-                    direction_vector_y = current_y - center_point[0]
-                    new_y = str(current_y + (direction_vector_y * random.randint(100, 130) / 100))
+                    direction_vector_y = current_y - center_point[1]
+                    new_y = str(center_point[1] + (direction_vector_y * random.randint(100, 105) / 100))
                     break
 
             replaced = ""
 
             for k in range(len(splited)):
                 if k == i:
-                    replaced += new_x + " "
+                    replaced += "X"+new_x + " "
                 elif k == j:
-                    replaced += new_y + " "
+                    replaced += "Y"+new_y + " "
                 else:
                     replaced += splited[k] + " "
-
+            print(replaced)
             l = replaced
+            #print(replaced)
 
         result = result +"\n" + l
 
-    text_file = open("randomized_vase_20_center.txt", "wt")
+    text_file = open("randomized_vase_center_5.gcode", "wt")
     text_file.write(result)
     text_file.close()
-    '''
 
 
 if __name__ == "__main__":

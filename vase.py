@@ -109,18 +109,35 @@ def modifying_gcode():
     gcode2 = open("vase_droop.gcode", "r")
     droop = gcode2.readlines()
 
+    # get head/tail lines
+    head = ""
+    tail = ""
+
+    for l in droop:
+        if ";LAYER:0" in l:
+            break
+        else:
+            head += l
+
+    for l in droop:
+        if ";TIME_ELAPSED:905.713563" in l:
+            flag = "keep"
+        elif flag == "keep":
+            tail += l
+
     for ls in droop:
-        print(ls)
+        #print(ls)
         if ";LAYER:" in ls and int(ls.split(":")[1]) % 10 != 1:
-            print(ls)
+            #print(ls)
             flag = "keep"
             layers += ls
         elif ";LAYER:" in ls and int(ls.split(":")[1]) % 10 == 1:
             flag = "remove"
         elif flag == "keep":
             layers += ls
+
     text_file = open("vase_droop_layerremove.gcode", "wt")
-    text_file.write(layers)
+    text_file.write(head + layers + tail)
     text_file.close()
 
 

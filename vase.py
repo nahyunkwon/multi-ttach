@@ -60,7 +60,7 @@ def get_center_point():
 
 def modifying_gcode():
 
-    gcode = open("vase.txt", "r")
+    gcode = open("vase_halfscale.gcode", "r")
 
     lines = gcode.readlines()
 
@@ -113,30 +113,30 @@ def modifying_gcode():
             l = replaced
             #print(replaced)
 
-        result = result +"\n" + l
+        result = result + l
 
-        text_file = open("vase_droop.gcode", "wt")
-        text_file.write(result)
-        text_file.close()
-        gcode2 = open("vase_droop.gcode", "r")
+    text_file = open("vase_droop.gcode", "wt")
+    text_file.write(result)
+    text_file.close()
+    gcode2 = open("vase_droop.gcode", "r")
 
-        droop = gcode2.readlines()
+    droop = gcode2.readlines()
 
-        layers = ""
+    layers = ""
 
-        for ls in droop:
+    for ls in droop:
+        print(ls)
+        if ";LAYER:" in ls and int(ls.split(":")[1]) % 10 != 1:
             print(ls)
-            if ";LAYER:" in ls and int(ls.split(":")[1]) % 10 != 1:
-                print(ls)
-                flag = "keep"
-                layers += ls
-            elif ";LAYER:" in ls and int(ls.split(":")[1]) % 10 == 1:
-                flag = "remove"
-            elif flag == "keep":
-                layers += ls
-        text_file = open("vase_droop_layerremove.gcode", "wt")
-        text_file.write(layers)
-        text_file.close()
+            flag = "keep"
+            layers += ls
+        elif ";LAYER:" in ls and int(ls.split(":")[1]) % 10 == 1:
+            flag = "remove"
+        elif flag == "keep":
+            layers += ls
+    text_file = open("vase_droop_layerremove.gcode", "wt")
+    text_file.write(layers)
+    text_file.close()
 
 
 if __name__ == "__main__":

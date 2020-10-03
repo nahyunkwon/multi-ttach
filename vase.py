@@ -4,7 +4,7 @@ import math
 
 
 def get_center_point():
-    gcode = open("vase.txt", "r")
+    gcode = open("vase_halfscale.gcode", "r")
 
     lines = gcode.readlines()
 

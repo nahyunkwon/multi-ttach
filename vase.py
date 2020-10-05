@@ -100,6 +100,13 @@ def modifying_gcode():
             l = replaced
             #print(replaced)
 
+        l = l.strip()
+
+        if "\n" not in l:
+            l += "\n"
+
+
+
         result = result + l
 
     text_file = open("vase_droop.gcode", "wt")

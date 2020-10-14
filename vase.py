@@ -4,7 +4,7 @@ import math
 
 
 def get_center_point():
-    gcode = open("vase_halfscale.gcode", "r")
+    gcode = open("vase35.gcode", "r")
     lines = gcode.readlines()
     flag = "no"
     first_layer = ""
@@ -47,7 +47,7 @@ def get_center_point():
 
 def modifying_gcode():
 
-    gcode = open("vase_halfscale.gcode", "r")
+    gcode = open("vase35.gcode", "r")
 
     lines = gcode.readlines()
 
@@ -109,11 +109,11 @@ def modifying_gcode():
 
         result = result + l
 
-    text_file = open("vase_droop.gcode", "wt")
+    text_file = open("vase35_droop.gcode", "wt")
     text_file.write(result)
     text_file.close()
 
-    gcode2 = open("vase_droop.gcode", "r")
+    gcode2 = open("vase35_droop.gcode", "r")
     droop = gcode2.readlines()
 
     # get head/tail lines
@@ -143,7 +143,7 @@ def modifying_gcode():
         elif flag == "keep":
             layers += ls
 
-    text_file = open("vase_droop_layerremove.gcode", "wt")
+    text_file = open("vase35_droop_layerremove.gcode", "wt")
     text_file.write(head + layers + tail)
     text_file.close()
 

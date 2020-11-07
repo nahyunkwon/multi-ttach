@@ -148,5 +148,85 @@ def modifying_gcode():
     text_file.close()
 
 
+def get_infill_area():
+
+    gcode = open("./cube_adhesion_test.gcode")
+
+    lines = gcode.readlines()
+
+    is_target = 0
+    is_infill = 0
+
+    target_infill = ""
+
+    for l in lines:
+        if ";LAYER:4" in l: # target layer
+            is_target = 1
+        if is_target == 1 and ";TYPE:FILL" in l:
+            is_infill = 1
+        if is_target == 1 and is_infill == 1:
+            target_infill += l
+        if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+            #is_target = 0
+            #is_infill = 0
+            break
+
+    x_values = []
+    y_values = []
+
+    print(target_infill)
+
+    for l in target_infill.split("\n"):
+        if "X" in l:
+            elems = l.split(" ")
+
+            for e in elems:
+                if "X" in e:
+                    x_values.append(e.split("X")[1])
+                if "Y" in e:
+                    y_values.append(e.split("Y")[1])
+
+    x_values.sort()
+    y_values.sort()
+
+    x_min = int(x_values[0].split(".")[0]) + 1
+    x_max = int(x_values[-1].split(".")[0])
+    y_min = int(y_values[0].split(".")[0]) + 1
+    y_max = int(y_values[-1].split(".")[0])
+
+    print(x_max)
+
+    grid_x = []
+    grid_y = []
+
+    current_x = x_min
+    current_y = y_min
+
+    while current_x <= x_max:
+        grid_x.append(current_x)
+        current_x += 2
+
+    while current_y <= y_max:
+        grid_y.append(current_y)
+        current_y += 2
+
+
+    g0 = "G0 F9000 "
+    g1 = "G1 F1200 "
+
+    result = ""
+
+    for x in grid_x:
+        result += g0 + "X" + str(x) + " Y" + str(grid_y[0]) + "\n"
+        result += g1 + "X" + str(x) + " Y" + str(grid_y[-1]) + " E0.5" + "\n"
+    for y in grid_y:
+        result += g0 + "X" + str(grid_x[0]) + " Y" + str(y) + "\n"
+        result += g1 + "X" + str(grid_x[-1]) + " Y" + str(y) + " E0.5" + "\n"
+
+    print(result)
+
+
+
+
 if __name__ == "__main__":
-    modifying_gcode()
+    get_infill_area()

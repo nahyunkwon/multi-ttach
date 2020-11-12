@@ -176,6 +176,7 @@ def get_infill_area():
 
     #print(target_infill)
 
+    # calculating the area of infill
     for l in target_infill.split("\n"):
         if "X" in l:
             elems = l.split(" ")
@@ -202,6 +203,7 @@ def get_infill_area():
     current_x = x_min
     current_y = y_min
 
+    # get coordinates for grid lines
     while current_x <= x_max:
         grid_x.append(current_x)
         current_x += 2
@@ -213,7 +215,7 @@ def get_infill_area():
     # a-structure
 
     g0 = "G0 F9500 "
-    g1 = "G1 F50 "
+    g1 = "G1 F5000 "
 
     result = ""
 

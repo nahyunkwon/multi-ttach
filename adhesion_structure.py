@@ -150,7 +150,7 @@ def modifying_gcode():
 
 def get_infill_area():
 
-    gcode = open("./CE3_cube_10.gcode")
+    gcode = open("./CE3_cube.gcode")
 
     lines = gcode.readlines()
 
@@ -160,7 +160,7 @@ def get_infill_area():
     target_infill = ""
 
     for l in lines:
-        if ";LAYER:25" in l:  # target layer
+        if ";LAYER:4" in l:  # target layer
             is_target = 1
         if is_target == 1 and ";TYPE:FILL" in l:
             is_infill = 1
@@ -219,13 +219,22 @@ def get_infill_area():
 
     result = ""
 
+    layer_height = 0.2
+    nozzle_dia = 0.4
+    length = 2
+    fa = ((1.75/2) ** 2) / math.pi
+
+    extrusion = (layer_height * nozzle_dia * length) / fa
+
     for x in grid_x:
         result += g0 + "X" + str(x) + " Y" + str(grid_y[0]) + "\n"
-        result += g1 + "X" + str(x) + " Y" + str(grid_y[-1]) + " E0.5" + "\n"
+        for i in range(1, len(grid_y)):
+            result += g1 + "X" + str(x) + " Y" + str(grid_y[i]) + " E" + str(extrusion) + "\n"
     result += "\n"
     for y in grid_y:
         result += g0 + "X" + str(grid_x[0]) + " Y" + str(y) + "\n"
-        result += g1 + "X" + str(grid_x[-1]) + " Y" + str(y) + " E0.5" + "\n"
+        for i in range(1, len(grid_x)):
+            result += g1 + "X" + str(grid_x[i]) + " Y" + str(y) + " E" + str(extrusion) + "\n"
 
     print(result)
 

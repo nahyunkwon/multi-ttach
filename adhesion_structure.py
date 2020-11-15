@@ -215,13 +215,13 @@ def get_infill_area():
     # a-structure
 
     g0 = "G0 F9500 "
-    g1 = "G1 F5000 "
+    g1 = "G1 F2000 "
 
     result = ""
 
     layer_height = 0.2
     nozzle_dia = 0.4
-    length = 2
+    length = 0.2
     fa = ((1.75/2) ** 2) / math.pi
 
     extrusion = (layer_height * nozzle_dia * length) / fa
@@ -260,17 +260,22 @@ def get_infill_area():
         current_y += 2
 
     for x in grid_x:
-        result += g0 + "X" + str(x) + " Y" + str(grid_y[0]) + "\n"
-        result += g1 + "X" + str(x) + " Y" + str(grid_y[0]) + " E3" + "\n"
+        #result += g0 + "X" + str(x) + " Y" + str(grid_y[0]) + "\n"
+        for y in grid_y:
+            result += g0 + "X" + str(x) + " Y" + str(y) + "\n"
+            result += g1 + "X" + str(x) + " Y" + str(y) + " E0.3" + "\n"
+
     result += "\n"
+    '''
     for y in grid_y:
-        result += g0 + "X" + str(grid_x[0]) + " Y" + str(y) + "\n"
-        result += g1 + "X" + str(grid_x[0]) + " Y" + str(y) + " E3" + "\n"
+        for x in grid_x:
+            result += g0 + "X" + str(x) + " Y" + str(y) + "\n"
+            # result += g0 + "X" + str(grid_x[0]) + " Y" + str(y) + "\n"
+            result += g1 + "X" + str(x) + " Y" + str(y) + " E0.3" + "\n"
+            '''
 
     print("---------------b-------------")
     print(result)
-
-
 
 
 if __name__ == "__main__":

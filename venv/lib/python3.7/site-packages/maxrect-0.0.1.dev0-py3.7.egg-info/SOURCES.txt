@@ -1,0 +1,14 @@
+README.rst
+setup.cfg
+setup.py
+maxrect/__init__.py
+maxrect.egg-info/PKG-INFO
+maxrect.egg-info/SOURCES.txt
+maxrect.egg-info/dependency_links.txt
+maxrect.egg-info/entry_points.txt
+maxrect.egg-info/not-zip-safe
+maxrect.egg-info/pbr.json
+maxrect.egg-info/requires.txt
+maxrect.egg-info/top_level.txt
+maxrect/scripts/__init__.py
+maxrect/scripts/cli.py

@@ -1,0 +1,7 @@
+click
+numpy
+shapely
+cvxpy
+
+[test]
+pytest

@@ -3,10 +3,11 @@ import random
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry.polygon import LinearRing, Polygon
+from shapely.geometry.polygon import LinearRing, Polygon, Point
+from maxrect import get_intersection, get_maximal_rectangle, rect2poly
 
 
-def get_infill_area():
+def generate_grid_infill():
 
     gcode = open("./CE3_cube.gcode")
 
@@ -79,7 +80,7 @@ def get_infill_area():
 
     layer_height = 0.2
     nozzle_dia = 0.4
-    length = 0.2
+    length = 2 * 0.1
     fa = ((1.75/2) ** 2) / math.pi
 
     extrusion = (layer_height * nozzle_dia * length) / fa
@@ -136,6 +137,25 @@ def get_infill_area():
     print(result)
 
 
+def get_min_max(input_list):
+    '''
+    get minimum and maximum value in the list
+    :param input_list: list of numbers
+    :return: min, max
+    '''
+
+    min_value = input_list[0]
+    max_value = input_list[0]
+
+    for i in input_list:
+        if i > max_value:
+            max_value = i
+        elif i < min_value:
+            min_value = i
+
+    return min_value, max_value
+
+
 def get_largest_rect(file, target_layer):
     '''
     get the largest rectangle that fits inner-wall
@@ -164,8 +184,8 @@ def get_largest_rect(file, target_layer):
 
     print(target_lines)
 
-    x = []
-    y = []
+    x_values = []
+    y_values = []
 
     for l in target_lines.split("\n"):
         if "G1" in l:
@@ -174,12 +194,12 @@ def get_largest_rect(file, target_layer):
             for e in elems:
                 if ";" not in e:
                     if "X" in e:
-                        x.append(e.split("X")[1])
+                        x_values.append(float(e.split("X")[1]))
                     if "Y" in e:
-                        y.append(e.split("Y")[1])
+                        y_values.append(float(e.split("Y")[1]))
 
-    print(x)
-    print(y)
+    print(x_values)
+    print(y_values)
 
     #plt.scatter(np.array(x), np.array(y))
 
@@ -187,29 +207,62 @@ def get_largest_rect(file, target_layer):
 
     polygon_coords = []
 
-    '''
+    for i in range(len(x_values)):
+        polygon_coords.append([float(x_values[i]), float(y_values[i])])
 
-    for i in range(len(x)):
-        polygon_coords.append((float(x[i]), float(y[i])))
+    polygon_coords.append([float(x_values[0]), float(y_values[0])])
 
-    polygon_coords.append((float(x[0]), float(y[0])))
+    #print(polygon_coords)
 
-    print(polygon_coords)
+
+
+    #print(polygon.area)
+
+    x_min, x_max = get_min_max(x_values)
+    y_min, y_max = get_min_max(y_values)
+
+    grid_x = []
+    grid_y = []
+
+    current_x = x_min
+    current_y = y_min
+
+    while current_x <= x_max:
+        grid_x.append(current_x)
+        current_x += 2
+    while current_y <= y_max:
+        grid_y.append(current_y)
+        current_y += 2
+
+    print(grid_x)
+    print(grid_y)
 
     polygon = Polygon(polygon_coords)
-    '''
 
-    x.append(x[0])
-    y.append(y[0])
+    for i in range(len(grid_x)):
+        for j in range(len(grid_y)):
+            current_point = Point(grid_x[i], grid_y[j])
 
-    fig, ax = plt.subplots()
+            if polygon.contains(current_point):
+                x_values.append(grid_x[i])
+                y_values.append(grid_y[j])
 
-    ax.plot(x, y, color='#6699cc', alpha=0.7,
-            linewidth=3, solid_capstyle='round', zorder=2)
-    ax.set_title('Polygon')
+    #print(x_min, x_max)
+
+
+    plt.plot(x_values, y_values, 'ro')
     plt.show()
+
+    '''
+    xs, ys = zip(*polygon_coords)
+
+    plt.figure()
+    plt.plot(xs, ys)
+    plt.show()
+    '''
 
 
 if __name__ == "__main__":
     #get_largest_rect("./CE3_cube.gcode", 4)
-    get_largest_rect("./cylinder.gcode", 22)
+    #get_largest_rect("./cylinder.gcode", 22)
+    get_largest_rect("./bunny.gcode", 12)

@@ -7,9 +7,11 @@ from shapely.geometry.polygon import LinearRing, Polygon, Point
 from maxrect import get_intersection, get_maximal_rectangle, rect2poly
 
 
+
+
 def generate_grid_infill():
 
-    gcode = open("./CE3_cube.gcode")
+    gcode = open("./bunny.gcode")
 
     lines = gcode.readlines()
 
@@ -156,10 +158,55 @@ def get_min_max(input_list):
     return min_value, max_value
 
 
-def get_largest_rect(file, target_layer):
+def get_largest_polygon(x_values, y_values):
     '''
-    get the largest rectangle that fits inner-wall
-    :return: x_min, y_min, x_max, y_max
+    Get the largest polygon among multiple polygons (if exist)
+    :param x_values: a list of all x coordinates in infill
+    :param y_values: a list of all y coordinates in infill
+    :return: the list of x-y coordinates of the largest polygon
+    '''
+
+    areas = []
+    polygon_coords = []
+
+    all_polygons = []
+
+    for i in range(len(x_values)):
+        if x_values[i] == "G0":  # next polygon
+            if len(polygon_coords) != 0:
+                areas.append(Polygon(polygon_coords).area)
+                all_polygons.append(polygon_coords)
+                polygon_coords = []
+        else:
+            polygon_coords.append([x_values[i], y_values[i]])
+
+    max_area = areas[0]
+    max_index = 0
+
+    print(areas)
+
+    for i in range(len(areas)):
+        if areas[i] > max_area:
+            max_area = areas[i]
+            max_index = i
+
+    return all_polygons[max_index]
+
+
+def is_far_from_inner_wall(current_x, current_y, x_values, y_values):
+
+    for k in range(len(x_values)):
+        print(math.hypot(current_x - x_values[k], current_y - y_values[k]))
+        if math.hypot(current_x - x_values[k], current_y - y_values[k]) < 1:
+            return False
+
+    return True
+
+
+def get_target_points(file, target_layer, gap):
+    '''
+    get the target rectangles that fit inner-wall
+    :return: list of grid coordinates
     '''
 
     gcode = open(file)
@@ -182,8 +229,6 @@ def get_largest_rect(file, target_layer):
         if is_target == 1 and is_inner_wall == 1:
             target_lines += l
 
-    print(target_lines)
-
     x_values = []
     y_values = []
 
@@ -198,23 +243,22 @@ def get_largest_rect(file, target_layer):
                     if "Y" in e:
                         y_values.append(float(e.split("Y")[1]))
 
-    print(x_values)
-    print(y_values)
+        elif "G0" in l:  # flag that indicates the next polygon
+            x_values.append("G0")
+            y_values.append("G0")
 
-    #plt.scatter(np.array(x), np.array(y))
+    polygon_coords = get_largest_polygon(x_values, y_values)
 
-    #plt.show()
+    polygon_coords.append(polygon_coords[0])
 
-    polygon_coords = []
+    print(polygon_coords)
 
-    for i in range(len(x_values)):
-        polygon_coords.append([float(x_values[i]), float(y_values[i])])
+    x_values = []
+    y_values = []
 
-    polygon_coords.append([float(x_values[0]), float(y_values[0])])
-
-    #print(polygon_coords)
-
-
+    for i in range(len(polygon_coords)):
+        x_values.append(polygon_coords[i][0])
+        y_values.append(polygon_coords[i][1])
 
     #print(polygon.area)
 
@@ -224,18 +268,25 @@ def get_largest_rect(file, target_layer):
     grid_x = []
     grid_y = []
 
-    current_x = x_min
-    current_y = y_min
+    current_x = x_min + 1
+    current_y = y_min + 1
+
+    print(x_min)
+    print(y_min)
 
     while current_x <= x_max:
         grid_x.append(current_x)
-        current_x += 2
+        current_x += gap
     while current_y <= y_max:
         grid_y.append(current_y)
-        current_y += 2
+        current_y += gap
 
     print(grid_x)
     print(grid_y)
+
+    # a structure
+    a_x = []
+    a_y = []
 
     polygon = Polygon(polygon_coords)
 
@@ -244,25 +295,46 @@ def get_largest_rect(file, target_layer):
             current_point = Point(grid_x[i], grid_y[j])
 
             if polygon.contains(current_point):
-                x_values.append(grid_x[i])
-                y_values.append(grid_y[j])
 
-    #print(x_min, x_max)
+                if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values):
+                    a_x.append(current_point.x)
+                    a_y.append(current_point.y)
 
+    a_coords = []  # coordinates of a structure
+
+    for i in range(len(a_x)):
+        a_coords.append([a_x[i], a_y[i]])
+
+    # x and y values for b structure
+    b_x = []
+    b_y = []
+
+    # check if the unit square is included in the polygon
+    for i in range(len(a_coords)):
+        if unit_square_is_included(a_coords[i], gap, a_coords):
+            b_x.append(a_coords[i][0] + gap/2)
+            b_y.append(a_coords[i][1] + gap/2)
 
     plt.plot(x_values, y_values, 'ro')
+    plt.plot(a_x, a_y, 'bo')
+    plt.plot(b_x, b_y, 'go')
     plt.show()
 
-    '''
-    xs, ys = zip(*polygon_coords)
+    return a_x, a_y
 
-    plt.figure()
-    plt.plot(xs, ys)
-    plt.show()
-    '''
+
+def unit_square_is_included(p, gap, coords):
+    if [p[0] + gap, p[1]] not in coords:
+        return False
+    if [p[0], p[1] + gap] not in coords:
+        return False
+    if [p[0] + gap, p[1] + gap] not in coords:
+        return False
+
+    return True
 
 
 if __name__ == "__main__":
-    #get_largest_rect("./CE3_cube.gcode", 4)
-    #get_largest_rect("./cylinder.gcode", 22)
-    get_largest_rect("./bunny.gcode", 12)
+    #get_target_points("./CE3_cube.gcode", 10, 2)
+    #get_target_points("./cylinder.gcode", 20, 2)
+    get_target_points("./bunny.gcode", 13, 1.5)

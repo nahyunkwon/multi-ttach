@@ -281,7 +281,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     g0 = "G0 F9500 "
     g1 = "G1 F2000 "
 
-    result = ""
+    a_structure = ""
 
     layer_height = 0.2
     nozzle_dia = 0.4
@@ -290,16 +290,16 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
 
     extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
 
-    result += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
     for i in range(len(a_x)):
         if i+1 < len(a_x):
             if a_x[i+1] == a_x[i]:  # at the same line (y-axis)
-                result += g1 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + " E" + str(extrusion)  + "\n"
+                a_structure += g1 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + " E" + str(extrusion)  + "\n"
             elif a_x[i+1] > a_x[i]:  # next line
-                result += g0 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + "\n"
+                a_structure += g0 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + "\n"
 
-    result += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
     a_coords = []  # coordinates of a structure
 
@@ -308,56 +308,40 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
 
     y_sorted = sorted(a_coords, key=lambda k: k[1])
 
-    result += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
     for i in range(len(y_sorted)):
         if i+1 < len(y_sorted):
             if y_sorted[i+1][1] == y_sorted[i][1]:  # at the same line (x-axis)
-                result += g1 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + " E" + str(extrusion) + "\n"
+                a_structure += g1 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + " E" + str(extrusion) + "\n"
             elif a_x[i + 1] > a_x[i]:  # next line
-                result += g0 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + "\n"
+                a_structure += g0 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + "\n"
 
-    print(result)
+    print(a_structure)
 
     # b-structure
+    b_structure = ""
 
-
-    result = ""
-
-    current_x = x_min + 1
-    current_y = y_min + 1
+    filling = 0.3
 
     g0 = "G0 F9500 "
     g1 = "G1 F50 "
 
-    grid_x.clear()
-    grid_y.clear()
+    count = 0
 
-    while current_x <= x_max:
-        grid_x.append(current_x)
-        current_x += 2
+    for i in range(len(b_x)):
+        count += 1
+        b_structure += g0 + "X" + str(b_x[i]) + " Y" + str(b_y[i]) + "\n"
+        b_structure += g1 + "X" + str(b_x[i]) + " Y" + str(b_y[i]) + " E" + str(filling) + "\n"
 
-    while current_y <= y_max:
-        grid_y.append(current_y)
-        current_y += 2
+    print("--------")
 
-    for x in grid_x:
-        #result += g0 + "X" + str(x) + " Y" + str(grid_y[0]) + "\n"
-        for y in grid_y:
-            result += g0 + "X" + str(x) + " Y" + str(y) + "\n"
-            result += g1 + "X" + str(x) + " Y" + str(y) + " E0.3" + "\n"
+    print(b_structure)
 
-    result += "\n"
-    '''
-    for y in grid_y:
-        for x in grid_x:
-            result += g0 + "X" + str(x) + " Y" + str(y) + "\n"
-            # result += g0 + "X" + str(grid_x[0]) + " Y" + str(y) + "\n"
-            result += g1 + "X" + str(x) + " Y" + str(y) + " E0.3" + "\n"
-            '''
+    print(len(b_x))
+    print(count)
 
-    print("---------------b-------------")
-    print(result)
+    return a_structure, b_structure
 
 
 def unit_square_is_included(p, gap, coords):
@@ -372,6 +356,11 @@ def unit_square_is_included(p, gap, coords):
 
 
 if __name__ == "__main__":
-    get_grid_points_for_target_layer("./CE3_cube.gcode", 10, 2)
+    file_name = "./CE3_cube.gcode"
+    target_layer = 10
+    gap = 2
+    a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+
+    generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
     #get_grid_points_for_target_layer("./cylinder.gcode", 20, 2)
     #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)

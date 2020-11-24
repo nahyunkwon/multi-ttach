@@ -152,7 +152,7 @@ def get_largest_polygon(x_values, y_values):
     return all_polygons[max_index]
 
 
-def is_far_from_inner_wall(x, y, x_values, y_values, threshold=1):
+def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
     """
 
     :param x:
@@ -238,18 +238,20 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     grid_x = []
     grid_y = []
 
-    current_x = x_min + gap
-    current_y = y_min + gap
-
+    current_x = x_min + gap / 2.2
+    current_y = y_min + gap / 2.2
     #print(x_min)
     #print(y_min)
 
+    grid_x.append(current_x)
+    grid_y.append(current_y)
+
     while current_x <= x_max:
-        grid_x.append(current_x)
         current_x += gap
+        grid_x.append(current_x)
     while current_y <= y_max:
-        grid_y.append(current_y)
         current_y += gap
+        grid_y.append(current_y)
 
     #print(grid_x)
     #print(grid_y)
@@ -266,7 +268,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
             if polygon.contains(current_point):
 
-                if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values):
+                if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
                     a_x.append(current_point.x)
                     a_y.append(current_point.y)
 
@@ -443,7 +445,7 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     a_structure = ""
     b_structure = ""
 
-    extrusion = 0.6  # extrusion amount optimized by experiment
+    extrusion = 0.7  # extrusion amount optimized by experiment
 
     for i in range(len(a_final)):
         if i + 1 < len(a_final):
@@ -472,6 +474,8 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     pause_code = open("./pause_code.txt").readlines()
 
+    lines = gcode.readlines()
+
     if type == "grid":
         gap = 2
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
@@ -481,7 +485,30 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
         a_structure, b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
 
-    lines = gcode.readlines()
+    is_target = 0
+    is_mesh = 0
+
+    mesh = ""
+
+    # get mesh code
+    for l in lines:
+        if ";LAYER:" + str(target_layer) + "\n" in l:
+            is_target = 1
+        if ";MESH:NONMESH" in l and is_target == 1:
+            is_mesh = 1
+
+        if is_target == 1 and is_mesh == 1:
+            if ";TIME_ELAPSED:" in l:
+                break
+            lines.pop(l)
+            mesh += l
+
+    mesh_f_replaced = ""
+
+    for m in mesh.split("\n"):
+        if "F300" in m:
+            m = m.replace("F300", "F9500")
+        mesh_f_replaced += m + "\n"
 
     is_target = 0
     is_infill = 0
@@ -518,6 +545,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                         for p in pause_code:
                             modified += p
                         modified += "\n"
+                        modified += mesh_f_replaced + "\n"
                 else:
                     modified += b_structure
                     is_b = 0
@@ -539,16 +567,19 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 is_target = 1
                 if ";LAYER:" + str(target_layer + 1) + "\n" in l:
                     is_b = 1
+                    modified += mesh_f_replaced + "\n"
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
                 is_infill = 1
 
             if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
-                is_mesh = 0
                 is_target = 0
                 is_infill = 0
                 if is_b == 0:
+
                     modified += a_structure
+
+                    modified += mesh + "----\n"
                     modified += "\n"
                     for p in pause_code:
                         modified += p
@@ -590,5 +621,5 @@ if __name__ == "__main__":
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
 
     #get_grid_points_for_target_layer("./cube.gcode", 4, 2)
-    #get_grid_points_for_target_layer("./cylinder.gcode", 20, 0.4)
+    #get_grid_points_for_target_layer("./cylinder.gcode", 20, 2)
     #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)

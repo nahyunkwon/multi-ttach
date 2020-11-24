@@ -291,12 +291,12 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             b_x.append(a_coords[i][0] + gap/2)
             b_y.append(a_coords[i][1] + gap/2)
 
-    '''
+
     plt.plot(x_values, y_values, 'ro')
     plt.plot(a_x, a_y, 'bo')
     plt.plot(b_x, b_y, 'go')
     plt.show()
-    '''
+
     return a_x, a_y, b_x, b_y
 
 
@@ -468,6 +468,37 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     return a_structure, b_structure
 
 
+def generate_full_infill(a_x, a_y, gap=0.8):
+    arbitrary = 0.1  # arbitrary number to optimize extrusion amount
+
+    # a-structure
+
+    g0 = "G0 F9500 "
+    g1 = "G1 F2000 "
+
+    a_structure = ""
+
+    layer_height = 0.2
+    nozzle_dia = 0.4
+    length = gap
+    fa = ((1.75 / 2) ** 2) / math.pi
+
+    extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
+
+    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+    for i in range(len(a_x)):
+        if i + 1 < len(a_x):
+            if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
+                a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+            elif a_x[i + 1] > a_x[i]:  # next line
+                a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
+
+    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+    return a_structure
+
+
 def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     gcode = open(file_name)
@@ -479,17 +510,23 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
     if type == "grid":
         gap = 2
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.8)
         a_structure, b_structure = generate_grid_infill(a_x, a_y, b_x, b_y, gap)
+        full_structure = generate_full_infill(f_x, f_y)
     elif type == "blob":
         gap = 2
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.8)
         a_structure, b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
+        full_structure = generate_full_infill(f_x, f_y)
 
     is_target = 0
     is_mesh = 0
 
     mesh = ""
 
+    pop_list = []
+    index = 0
     # get mesh code
     for l in lines:
         if ";LAYER:" + str(target_layer) + "\n" in l:
@@ -501,6 +538,15 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             if ";TIME_ELAPSED:" in l:
                 break
             mesh += l
+            pop_list.append(index)
+
+        index += 1
+   
+    lines_a = lines
+    lines = []
+    for i in range(len(lines_a)):
+        if i not in pop_list:
+            lines.append(lines_a[i])
 
     mesh_f_replaced = ""
 
@@ -518,7 +564,6 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     if type == "grid":
         layer = 0
-
         for l in lines:
             if ";LAYER:" + str(target_layer - 2) + "\n" in l \
                     or ";LAYER:" + str(target_layer - 1) + "\n" in l \
@@ -534,12 +579,15 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 modified += l
                 is_infill = 1
 
-            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
                 is_infill = 0
                 if is_b == 0:
+
                     modified += a_structure
                     if layer == target_layer:
+                        modified += "\n"
+                        modified += mesh + "\n"
                         modified += "\n"
                         for p in pause_code:
                             modified += p
@@ -548,7 +596,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 else:
                     modified += b_structure
                     is_b = 0
-                modified += ";MESH:NONMESH\n"
+                #modified += ";MESH:NONMESH\n"
             elif is_target == 1 and is_infill == 1:
                 pass
             else:
@@ -558,7 +606,6 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             f.write(modified)
 
     elif type == "blob":
-
         # add a and b structure
         for l in lines:
             if ";LAYER:" + str(target_layer) + "\n" in l\
@@ -567,26 +614,26 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 if ";LAYER:" + str(target_layer + 1) + "\n" in l:
                     is_b = 1
                     modified += mesh_f_replaced + "\n"
+
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
                 is_infill = 1
 
-            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
                 is_infill = 0
                 if is_b == 0:
 
                     modified += a_structure
-
-                    modified += mesh + "----\n"
+                    modified += mesh + "\n"
                     modified += "\n"
                     for p in pause_code:
                         modified += p
                     modified += "\n"
+                    modified += mesh_f_replaced + "\n"
                 else:
                     modified += b_structure
                     is_b = 0
-                modified += ";MESH:NONMESH\n"
             elif is_target == 1 and is_infill == 1:
                 pass
             else:
@@ -611,7 +658,7 @@ if __name__ == "__main__":
     #file_name = "./cube.gcode"
     #target_layer = 4
 
-    replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
+    replace_infill_to_adhesion_structure("./cube.gcode", 7, "grid")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")

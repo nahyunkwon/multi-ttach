@@ -7,6 +7,97 @@ from shapely.geometry.polygon import LinearRing, Polygon, Point
 from maxrect import get_intersection, get_maximal_rectangle, rect2poly
 
 
+def heating_top_layer(layer_no):
+    gcode = open("dogbone.gcode", "r")
+    pause = open("pausecode.txt","r")
+    pauselines = pause.readlines()
+    pausecode =""
+    lines = gcode.readlines()
+    layer_count = 0
+    flag = "no"
+
+    i = 0
+    head = ""
+    after_half_layer = ""
+    half_layer = ""
+    replaced = ""
+    layer_flag = "no"
+    goback = ""
+    goback2 = ""
+
+#Get pausecode
+    for p in pauselines:
+        pausecode += p
+
+#Get total layer count
+    for i in range(len(lines)):
+
+        if ";LAYER_COUNT:" in lines[i]:
+            countline = lines[i].split(":")
+            layer_count = int(countline[1])
+# Get header part of code
+    for l in lines:
+
+        if ";LAYER:" + str(int(layer_no)) in l:
+            break
+        else:
+            head += l
+
+#Get layer to be repeated and remove the E commands
+    for i in range(len(lines)):
+        if ";LAYER:"+str(int(layer_no)) in lines[i]:
+            flag = "yes"
+
+        elif ";LAYER:" in lines[i]:
+            flag = "no"
+
+
+        if flag == "yes":
+            half_layer += lines[i]
+            # Get co-ordinates of where the extruder paused and Z height
+            if "Z" in lines[i]:
+                split_goback = lines[i].split(" ")
+
+                for j in range(len(split_goback)):
+                    if "F" in split_goback[j]:
+                        split_goback[j] = "F6000"
+                    goback2 += split_goback[j] + " "
+                    if "Z" in split_goback[j]:
+                        current_z = float(split_goback[j].split("Z")[1])
+                        new_z = current_z - 0.2
+                        split_goback[j] = "Z"+str(new_z)
+                    goback += split_goback[j] + " "
+
+            split_layer = lines[i].split(" ")
+
+            for k in range(len(split_layer)):
+                if "E" in split_layer[k]:
+                    split_layer[k]="\n"
+
+
+
+            for j in range(len(split_layer)):
+                replaced += split_layer[j] + " "
+
+
+
+#Get rest of the code
+    for i in range(len(lines)):
+        if ";LAYER:"+str(int(layer_no)+1) in lines[i]:
+            layer_flag = "yes"
+        if layer_flag == "yes":
+            after_half_layer += lines[i]
+
+
+    print(layer_no)
+    newcode = open("multidogbone.gcode", "wt")
+    withoutheat = open("dogbonewithoutheat.gcode", "wt")
+    n = newcode.write(head + half_layer + pausecode + "\n" + goback + "\n" + "\n;REPEAT LAYER\n"+ replaced + after_half_layer)
+    m = withoutheat.write(head + half_layer + pausecode + "\n" + goback2 + "\n" + after_half_layer)
+    withoutheat.close()
+    newcode.close()
+
+
 def get_min_max(input_list):
     '''
     get minimum and maximum value in the list
@@ -352,22 +443,24 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     a_structure = ""
     b_structure = ""
 
-    for i in range(len(a_final)):
-        if i+1 < len(a_final):
-            a_structure += g1 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i][1]) + " E0.5" + "\n"
-            a_structure += g0 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i][1]) + " Z" + str(new_z) + "\n"
-            a_structure += g0 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i+1][1]) + " Z" + str(current_z) + "\n"
+    extrusion = 0.6  # extrusion amount optimized by experiment
 
-    a_structure += g1 + "X" + str(a_final[-1][0]) + " Y" + str(a_final[-1][1]) + " E0.5" + "\n"
+    for i in range(len(a_final)):
+        if i + 1 < len(a_final):
+            a_structure += g1 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i][1]) + " E" + str(extrusion) + "\n"
+            a_structure += g0 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i][1]) + " Z" + str(new_z) + "\n"
+            a_structure += g0 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i + 1][1]) + " Z" + str(current_z) + "\n"
+
+    a_structure += g1 + "X" + str(a_final[-1][0]) + " Y" + str(a_final[-1][1]) + " E" + str(extrusion) + "\n"
     a_structure += g0 + "X" + str(a_final[-1][0]) + " Y" + str(a_final[-1][1]) + " Z" + str(new_z) + "\n"
 
     for i in range(len(b_final)):
-        if i+1 < len(b_final):
-            b_structure += g1 + "X" + str(b_final[i][0]) + " Y" + str(b_final[i][1]) + " E0.5" + "\n"
+        if i + 1 < len(b_final):
+            b_structure += g1 + "X" + str(b_final[i][0]) + " Y" + str(b_final[i][1]) + " E" + str(extrusion) + "\n"
             b_structure += g0 + "X" + str(b_final[i][0]) + " Y" + str(b_final[i][1]) + " Z" + str(new_z) + "\n"
-            b_structure += g0 + "X" + str(b_final[i+1][0]) + " Y" + str(b_final[i][1]) + " Z" + str(current_z) + "\n"
+            b_structure += g0 + "X" + str(b_final[i + 1][0]) + " Y" + str(b_final[i][1]) + " Z" + str(current_z) + "\n"
 
-    b_structure += g1 + "X" + str(b_final[-1][0]) + " Y" + str(b_final[-1][1]) + " E0.5" + "\n"
+    b_structure += g1 + "X" + str(b_final[-1][0]) + " Y" + str(b_final[-1][1]) + " E" + str(extrusion) + "\n"
     b_structure += g0 + "X" + str(b_final[-1][0]) + " Y" + str(b_final[-1][1]) + " Z" + str(new_z) + "\n"
 
     return a_structure, b_structure
@@ -376,6 +469,8 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
 def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     gcode = open(file_name)
+
+    pause_code = open("./pause_code.txt").readlines()
 
     if type == "grid":
         gap = 2
@@ -396,14 +491,19 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
     is_b = 0
 
     if type == "grid":
+        layer = 0
+
         for l in lines:
-            if ";LAYER:" + str(target_layer - 2)+ "\n" in l \
+            if ";LAYER:" + str(target_layer - 2) + "\n" in l \
                     or ";LAYER:" + str(target_layer - 1) + "\n" in l \
                     or ";LAYER:" + str(target_layer) + "\n" in l \
                     or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
                 is_target = 1
                 if ";LAYER:" + str(target_layer + 1) + "\n" in l:
                     is_b = 1
+                    layer = 0
+                if ";LAYER:" + str(target_layer) + "\n" in l:
+                    layer = target_layer
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
                 is_infill = 1
@@ -413,6 +513,11 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 is_infill = 0
                 if is_b == 0:
                     modified += a_structure
+                    if layer == target_layer:
+                        modified += "\n"
+                        for p in pause_code:
+                            modified += p
+                        modified += "\n"
                 else:
                     modified += b_structure
                     is_b = 0
@@ -426,6 +531,8 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             f.write(modified)
 
     elif type == "blob":
+
+        # add a and b structure
         for l in lines:
             if ";LAYER:" + str(target_layer) + "\n" in l\
                     or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
@@ -437,21 +544,21 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 is_infill = 1
 
             if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+                is_mesh = 0
                 is_target = 0
                 is_infill = 0
                 if is_b == 0:
                     modified += a_structure
+                    modified += "\n"
+                    for p in pause_code:
+                        modified += p
+                    modified += "\n"
                 else:
                     modified += b_structure
                     is_b = 0
                 modified += ";MESH:NONMESH\n"
             elif is_target == 1 and is_infill == 1:
                 pass
-            elif ";LAYER:" + str(target_layer + 2) + "\n" in l:
-                modified += "G0 X0 Y0"
-                modified += "M0\n"
-
-                modified += l
             else:
                 modified += l
 
@@ -470,103 +577,11 @@ def unit_square_is_included(p, gap, coords):
     return True
 
 
-def heating_top_layer(layer_no):
-    gcode = open("dogbone.gcode", "r")
-    pause = open("pausecode.txt","r")
-    pauselines = pause.readlines()
-    pausecode =""
-    lines = gcode.readlines()
-    layer_count = 0
-    flag = "no"
-
-    i = 0
-    head = ""
-    after_half_layer = ""
-    half_layer = ""
-    replaced = ""
-    layer_flag = "no"
-    goback = ""
-    goback2 = ""
-
-#Get pausecode
-    for p in pauselines:
-        pausecode += p
-
-#Get total layer count
-    for i in range(len(lines)):
-
-        if ";LAYER_COUNT:" in lines[i]:
-            countline = lines[i].split(":")
-            layer_count = int(countline[1])
-# Get header part of code
-    for l in lines:
-
-        if ";LAYER:" + str(int(layer_no)) in l:
-            break
-        else:
-            head += l
-
-#Get layer to be repeated and remove the E commands
-    for i in range(len(lines)):
-        if ";LAYER:"+str(int(layer_no)) in lines[i]:
-            flag = "yes"
-
-        elif ";LAYER:" in lines[i]:
-            flag = "no"
-
-
-        if flag == "yes":
-            half_layer += lines[i]
-            # Get co-ordinates of where the extruder paused and Z height
-            if "Z" in lines[i]:
-                split_goback = lines[i].split(" ")
-
-                for j in range(len(split_goback)):
-                    if "F" in split_goback[j]:
-                        split_goback[j] = "F6000"
-                    goback2 += split_goback[j] + " "
-                    if "Z" in split_goback[j]:
-                        current_z = float(split_goback[j].split("Z")[1])
-                        new_z = current_z - 0.2
-                        split_goback[j] = "Z"+str(new_z)
-                    goback += split_goback[j] + " "
-
-            split_layer = lines[i].split(" ")
-
-            for k in range(len(split_layer)):
-                if "E" in split_layer[k]:
-                    split_layer[k]="\n"
-
-
-
-            for j in range(len(split_layer)):
-                replaced += split_layer[j] + " "
-
-
-
-#Get rest of the code
-    for i in range(len(lines)):
-        if ";LAYER:"+str(int(layer_no)+1) in lines[i]:
-            layer_flag = "yes"
-        if layer_flag == "yes":
-            after_half_layer += lines[i]
-
-
-    print(layer_no)
-    newcode = open("multidogbone.gcode", "wt")
-    withoutheat = open("dogbonewithoutheat.gcode", "wt")
-    n = newcode.write(head + half_layer + pausecode + "\n" + goback + "\n" + "\n;REPEAT LAYER\n"+ replaced + after_half_layer)
-    m = withoutheat.write(head + half_layer + pausecode + "\n" + goback2 + "\n" + after_half_layer)
-    withoutheat.close()
-    newcode.close()
-
-
-
 if __name__ == "__main__":
     #file_name = "./cube.gcode"
     #target_layer = 4
 
-    #replace_infill_to_adhesion_structure(file_name, target_layer, "blob")
+    replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
@@ -574,6 +589,6 @@ if __name__ == "__main__":
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
 
-    get_grid_points_for_target_layer("./cube.gcode", 4, 2)
+    #get_grid_points_for_target_layer("./cube.gcode", 4, 2)
     #get_grid_points_for_target_layer("./cylinder.gcode", 20, 0.4)
     #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)

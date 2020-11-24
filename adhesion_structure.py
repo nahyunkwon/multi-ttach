@@ -500,7 +500,6 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
         if is_target == 1 and is_mesh == 1:
             if ";TIME_ELAPSED:" in l:
                 break
-            lines.pop(l)
             mesh += l
 
     mesh_f_replaced = ""

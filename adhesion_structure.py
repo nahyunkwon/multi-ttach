@@ -198,83 +198,18 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             b_x.append(a_coords[i][0] + gap/2)
             b_y.append(a_coords[i][1] + gap/2)
 
+    '''
     plt.plot(x_values, y_values, 'ro')
     plt.plot(a_x, a_y, 'bo')
     plt.plot(b_x, b_y, 'go')
     plt.show()
-
+    '''
     return a_x, a_y, b_x, b_y
 
 
-def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
+def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
-    gcode = open(file_name)
-
-    lines = gcode.readlines()
-
-    '''
-
-    is_target = 0
-    is_infill = 0
-
-    target_infill = ""
-
-    for l in lines:
-        if ";LAYER:4" in l:  # target layer
-            is_target = 1
-        if is_target == 1 and ";TYPE:FILL" in l:
-            is_infill = 1
-        if is_target == 1 and is_infill == 1:
-            target_infill += l
-        if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
-            #is_target = 0
-            #is_infill = 0
-            break
-
-    x_values = []
-    y_values = []
-
-    #print(target_infill)
-
-    # calculating the area of infill
-    for l in target_infill.split("\n"):
-        if "X" in l:
-            elems = l.split(" ")
-
-            for e in elems:
-                if "X" in e:
-                    x_values.append(e.split("X")[1])
-                if "Y" in e:
-                    y_values.append(e.split("Y")[1])
-
-    x_values.sort()
-    y_values.sort()
-
-    x_min = int(x_values[0].split(".")[0]) + 1
-    x_max = int(x_values[-1].split(".")[0])
-    y_min = int(y_values[0].split(".")[0]) + 1
-    y_max = int(y_values[-1].split(".")[0])
-
-    #print(x_min)
-
-    grid_x = []
-    grid_y = []
-
-    current_x = x_min
-    current_y = y_min
-
-    # get coordinates for grid lines
-    while current_x <= x_max:
-        grid_x.append(current_x)
-        current_x += 2
-
-    while current_y <= y_max:
-        grid_y.append(current_y)
-        current_y += 2
-        
-    '''
-
-    arbitrary = 0.1
+    arbitrary = 0.1  # arbitrary number to optimize extrusion amount
 
     # a-structure
 
@@ -295,7 +230,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     for i in range(len(a_x)):
         if i+1 < len(a_x):
             if a_x[i+1] == a_x[i]:  # at the same line (y-axis)
-                a_structure += g1 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + " E" + str(extrusion)  + "\n"
+                a_structure += g1 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + " E" + str(extrusion) + "\n"
             elif a_x[i+1] > a_x[i]:  # next line
                 a_structure += g0 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + "\n"
 
@@ -317,12 +252,10 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
             elif a_x[i + 1] > a_x[i]:  # next line
                 a_structure += g0 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + "\n"
 
-    print(a_structure)
-
     # b-structure
     b_structure = ""
 
-    filling = 0.3
+    filling = 0.3  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
     g0 = "G0 F9500 "
     g1 = "G1 F50 "
@@ -334,14 +267,196 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
         b_structure += g0 + "X" + str(b_x[i]) + " Y" + str(b_y[i]) + "\n"
         b_structure += g1 + "X" + str(b_x[i]) + " Y" + str(b_y[i]) + " E" + str(filling) + "\n"
 
-    print("--------")
+    return a_structure, b_structure
 
-    print(b_structure)
 
-    print(len(b_x))
-    print(count)
+def get_zig_zag_for_lines(x, y):
+
+    final = []
+    line = []
+
+    line.append([x[0], y[0]])
+
+    for i in range(len(x) - 1):
+        if x[i + 1] == x[i]:  # at the same line
+            line.append([x[i + 1], y[i + 1]])
+        elif x[i + 1] > x[i]:  # next line
+            if len(final) % 2 == 0:
+                final.append(line)
+                line = []
+            else:
+                line.reverse()
+                final.append(line)
+                line = []
+            line.append([x[i+1], y[i+1]])
+
+    line.append([x[-1], y[-1]])
+    if len(final) % 2 == 0:
+        final.append(line)
+    else:
+        line.reverse()
+        final.append(line)
+
+    result = []
+
+    for f in final:
+        for i in f:
+            result.append(i)
+
+    return result
+
+
+def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
+
+    gcode = open(file_name)
+
+    lines = gcode.readlines()
+
+    current_z = 0
+    new_z = 0
+
+    target_z = "no"
+
+    # get Z value
+    for i in range(len(lines)):
+        if ";LAYER:" + str(target_layer) + "\n" in lines[i]:  # target layer
+            target_z = "yes"
+        elif ";LAYER" in lines[i]:
+            target_z = "no"
+
+        if target_z == "yes":
+            # print(lines[i])
+            if "Z" in lines[i]:
+                #print(lines[i])
+                splitline = lines[i].split(" ")
+                for j in range(len(splitline)):
+                    if "Z" in splitline[j]:
+                        if splitline[j].split("Z")[1] == '':
+                            break
+                        else:
+                            current_z = float(splitline[j].split("Z")[1])
+                            current_z -= 0.2
+                            new_z = current_z + 0.4
+
+    a_final = get_zig_zag_for_lines(a_x, a_y)
+
+    b_final = get_zig_zag_for_lines(b_x, b_y)
+
+    print(a_final)
+    print(b_final)
+    
+    # a-structure
+    g0 = "G0 F9500 "
+    g1 = "G1 F9500 "
+
+    a_structure = ""
+    b_structure = ""
+
+    for i in range(len(a_final)):
+        if i+1 < len(a_final):
+            a_structure += g1 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i][1]) + " E0.5" + "\n"
+            a_structure += g0 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i][1]) + " Z" + str(new_z) + "\n"
+            a_structure += g0 + "X" + str(a_final[i][0]) + " Y" + str(a_final[i+1][1]) + " Z" + str(current_z) + "\n"
+
+    a_structure += g1 + "X" + str(a_final[-1][0]) + " Y" + str(a_final[-1][1]) + " E0.5" + "\n"
+    a_structure += g0 + "X" + str(a_final[-1][0]) + " Y" + str(a_final[-1][1]) + " Z" + str(new_z) + "\n"
+
+    for i in range(len(b_final)):
+        if i+1 < len(b_final):
+            b_structure += g1 + "X" + str(b_final[i][0]) + " Y" + str(b_final[i][1]) + " E0.5" + "\n"
+            b_structure += g0 + "X" + str(b_final[i][0]) + " Y" + str(b_final[i][1]) + " Z" + str(new_z) + "\n"
+            b_structure += g0 + "X" + str(b_final[i+1][0]) + " Y" + str(b_final[i][1]) + " Z" + str(current_z) + "\n"
+
+    b_structure += g1 + "X" + str(b_final[-1][0]) + " Y" + str(b_final[-1][1]) + " E0.5" + "\n"
+    b_structure += g0 + "X" + str(b_final[-1][0]) + " Y" + str(b_final[-1][1]) + " Z" + str(new_z) + "\n"
 
     return a_structure, b_structure
+
+
+def replace_infill_to_adhesion_structure(file_name, target_layer, type):
+
+    gcode = open(file_name)
+
+    if type == "grid":
+        gap = 2
+        a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+        a_structure, b_structure = generate_grid_infill(a_x, a_y, b_x, b_y, gap)
+    elif type == "blob":
+        gap = 1.5
+        a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+        a_structure, b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
+
+    lines = gcode.readlines()
+
+    is_target = 0
+    is_infill = 0
+
+    modified = ""
+
+    is_b = 0
+
+    if type == "grid":
+        for l in lines:
+            if ";LAYER:" + str(target_layer - 2)+ "\n" in l \
+                    or ";LAYER:" + str(target_layer - 1) + "\n" in l \
+                    or ";LAYER:" + str(target_layer) + "\n" in l \
+                    or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
+                is_target = 1
+                if ";LAYER:" + str(target_layer + 1) + "\n" in l:
+                    is_b = 1
+            if is_target == 1 and ";TYPE:FILL" in l:
+                modified += l
+                is_infill = 1
+
+            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+                is_target = 0
+                is_infill = 0
+                if is_b == 0:
+                    modified += a_structure
+                else:
+                    modified += b_structure
+                    is_b = 0
+                modified += ";MESH:NONMESH\n"
+            elif is_target == 1 and is_infill == 1:
+                pass
+            else:
+                modified += l
+
+        with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
+            f.write(modified)
+
+    elif type == "blob":
+        for l in lines:
+            if ";LAYER:" + str(target_layer) + "\n" in l\
+                    or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
+                is_target = 1
+                if ";LAYER:" + str(target_layer + 1) + "\n" in l:
+                    is_b = 1
+            if is_target == 1 and ";TYPE:FILL" in l:
+                modified += l
+                is_infill = 1
+
+            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+                is_target = 0
+                is_infill = 0
+                if is_b == 0:
+                    modified += a_structure
+                else:
+                    modified += b_structure
+                    is_b = 0
+                modified += ";MESH:NONMESH\n"
+            elif is_target == 1 and is_infill == 1:
+                pass
+            elif ";LAYER:" + str(target_layer + 2) + "\n" in l:
+                modified += "G0 X0 Y0"
+                modified += "M0\n"
+
+                modified += l
+            else:
+                modified += l
+
+        with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
+            f.write(modified)
 
 
 def unit_square_is_included(p, gap, coords):
@@ -356,11 +471,17 @@ def unit_square_is_included(p, gap, coords):
 
 
 if __name__ == "__main__":
-    file_name = "./CE3_cube.gcode"
-    target_layer = 10
-    gap = 2
-    a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+    #file_name = "./cube.gcode"
+    target_layer = 4
 
-    generate_grid_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
-    #get_grid_points_for_target_layer("./cylinder.gcode", 20, 2)
+    #replace_infill_to_adhesion_structure(file_name, target_layer, "blob")
+
+    replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
+    replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
+
+    replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
+    replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
+
+    #get_grid_points_for_target_layer("./cube.gcode", 10, 2)
+    #get_grid_points_for_target_layer("./cylinder.gcode", 20, 0.4)
     #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)

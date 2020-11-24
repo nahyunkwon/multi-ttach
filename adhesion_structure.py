@@ -147,8 +147,8 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     grid_x = []
     grid_y = []
 
-    current_x = x_min + 1
-    current_y = y_min + 1
+    current_x = x_min + gap
+    current_y = y_min + gap
 
     #print(x_min)
     #print(y_min)
@@ -382,7 +382,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
         a_structure, b_structure = generate_grid_infill(a_x, a_y, b_x, b_y, gap)
     elif type == "blob":
-        gap = 1.5
+        gap = 2
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
         a_structure, b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
 
@@ -470,18 +470,110 @@ def unit_square_is_included(p, gap, coords):
     return True
 
 
+def heating_top_layer(layer_no):
+    gcode = open("dogbone.gcode", "r")
+    pause = open("pausecode.txt","r")
+    pauselines = pause.readlines()
+    pausecode =""
+    lines = gcode.readlines()
+    layer_count = 0
+    flag = "no"
+
+    i = 0
+    head = ""
+    after_half_layer = ""
+    half_layer = ""
+    replaced = ""
+    layer_flag = "no"
+    goback = ""
+    goback2 = ""
+
+#Get pausecode
+    for p in pauselines:
+        pausecode += p
+
+#Get total layer count
+    for i in range(len(lines)):
+
+        if ";LAYER_COUNT:" in lines[i]:
+            countline = lines[i].split(":")
+            layer_count = int(countline[1])
+# Get header part of code
+    for l in lines:
+
+        if ";LAYER:" + str(int(layer_no)) in l:
+            break
+        else:
+            head += l
+
+#Get layer to be repeated and remove the E commands
+    for i in range(len(lines)):
+        if ";LAYER:"+str(int(layer_no)) in lines[i]:
+            flag = "yes"
+
+        elif ";LAYER:" in lines[i]:
+            flag = "no"
+
+
+        if flag == "yes":
+            half_layer += lines[i]
+            # Get co-ordinates of where the extruder paused and Z height
+            if "Z" in lines[i]:
+                split_goback = lines[i].split(" ")
+
+                for j in range(len(split_goback)):
+                    if "F" in split_goback[j]:
+                        split_goback[j] = "F6000"
+                    goback2 += split_goback[j] + " "
+                    if "Z" in split_goback[j]:
+                        current_z = float(split_goback[j].split("Z")[1])
+                        new_z = current_z - 0.2
+                        split_goback[j] = "Z"+str(new_z)
+                    goback += split_goback[j] + " "
+
+            split_layer = lines[i].split(" ")
+
+            for k in range(len(split_layer)):
+                if "E" in split_layer[k]:
+                    split_layer[k]="\n"
+
+
+
+            for j in range(len(split_layer)):
+                replaced += split_layer[j] + " "
+
+
+
+#Get rest of the code
+    for i in range(len(lines)):
+        if ";LAYER:"+str(int(layer_no)+1) in lines[i]:
+            layer_flag = "yes"
+        if layer_flag == "yes":
+            after_half_layer += lines[i]
+
+
+    print(layer_no)
+    newcode = open("multidogbone.gcode", "wt")
+    withoutheat = open("dogbonewithoutheat.gcode", "wt")
+    n = newcode.write(head + half_layer + pausecode + "\n" + goback + "\n" + "\n;REPEAT LAYER\n"+ replaced + after_half_layer)
+    m = withoutheat.write(head + half_layer + pausecode + "\n" + goback2 + "\n" + after_half_layer)
+    withoutheat.close()
+    newcode.close()
+
+
+
 if __name__ == "__main__":
     #file_name = "./cube.gcode"
-    target_layer = 4
+    #target_layer = 4
 
     #replace_infill_to_adhesion_structure(file_name, target_layer, "blob")
 
-    replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
-    replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
+    #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
 
-    replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
-    replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
+    #replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
 
-    #get_grid_points_for_target_layer("./cube.gcode", 10, 2)
+    get_grid_points_for_target_layer("./cube.gcode", 4, 2)
     #get_grid_points_for_target_layer("./cylinder.gcode", 20, 0.4)
     #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)

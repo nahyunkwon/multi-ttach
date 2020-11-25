@@ -7,9 +7,15 @@ from shapely.geometry.polygon import LinearRing, Polygon, Point
 from maxrect import get_intersection, get_maximal_rectangle, rect2poly
 
 
-def heating_top_layer(layer_no):
-    gcode = open("dogbone.gcode", "r")
-    pause = open("pausecode.txt","r")
+def heating_top_layer(file_name, layer_no):
+    """
+    after changing the filament,
+    moves nozzle without extrusion to heat the previous layer.
+    :param layer_no: target layer number
+    :return: null
+    """
+    gcode = open(file_name, "r")
+    pause = open("pause_code.txt","r")
     pauselines = pause.readlines()
     pausecode =""
     lines = gcode.readlines()
@@ -90,12 +96,12 @@ def heating_top_layer(layer_no):
 
 
     #print(layer_no)
-    newcode = open("multidogbone.gcode", "wt")
-    withoutheat = open("dogbonewithoutheat.gcode", "wt")
+    newcode = open(file_name.split(".gcode")[0] +"_heating.gcode", "wt")
+    #withoutheat = open("dogbonewithoutheat.gcode", "wt")
     n = newcode.write(head + half_layer + pausecode + "\n" + goback + "\n" + "\n;REPEAT LAYER\n"+ replaced + after_half_layer)
-    m = withoutheat.write(head + half_layer + pausecode + "\n" + goback2 + "\n" + after_half_layer)
-    withoutheat.close()
-    newcode.close()
+    #m = withoutheat.write(head + half_layer + pausecode + "\n" + goback2 + "\n" + after_half_layer)
+    #withoutheat.close()
+    #newcode.close()
 
 
 def get_min_max(input_list):
@@ -154,13 +160,13 @@ def get_largest_polygon(x_values, y_values):
 
 def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
     """
-
-    :param x:
-    :param y:
-    :param x_values:
-    :param y_values:
-    :param threshold:
-    :return:
+    determine if the point is fairly distant from points on polygon
+    :param x: point_x
+    :param y: point_y
+    :param x_values: x coordinates of polygon
+    :param y_values: y coordinates of polygon
+    :param threshold: maximum distance
+    :return: true or false
     """
 
     for k in range(len(x_values)):
@@ -172,11 +178,11 @@ def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
 
 def get_grid_points_for_target_layer(file, target_layer, gap):
     '''
-
-    :param file:
-    :param target_layer:
-    :param gap: (mm)
-    :return:
+    get grid points inside infill on the target layer
+    :param file: gcode file location
+    :param target_layer: target layer number
+    :param gap: gap between grid points (mm)
+    :return: lists of x coordinates and y coordinates of a-structure and b-structure
     '''
 
     gcode = open(file)
@@ -291,12 +297,12 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             b_x.append(a_coords[i][0] + gap/2)
             b_y.append(a_coords[i][1] + gap/2)
 
-    '''
+
     plt.plot(x_values, y_values, 'ro')
     plt.plot(a_x, a_y, 'bo')
     plt.plot(b_x, b_y, 'go')
     plt.show()
-    '''
+
     return a_x, a_y, b_x, b_y
 
 
@@ -584,7 +590,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 modified += l
                 is_infill = 1
 
-            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
+            if ";TIME_ELAPSED" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
                 is_infill = 0
                 if is_b == 0:
@@ -710,7 +716,7 @@ if __name__ == "__main__":
     #target_layer = 4
 
     #replace_infill_to_adhesion_structure("./cuberelative.gcode", 8, "grid")
-    replace_infill_to_adhesion_structure("./cylinder0.2.gcode", 6, "blob")
+    #replace_infill_to_adhesion_structure("./cylinder0.2.gcode", 6, "blob")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
@@ -720,4 +726,9 @@ if __name__ == "__main__":
 
     #get_grid_points_for_target_layer("./cube.gcode", 4, 2)
     #get_grid_points_for_target_layer("./cylinder0.2.gcode", 6, 2)
-    #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)
+    #get_grid_points_for_target_layer("./bunny0.2.gcode", 13, 2)
+
+    #replace_infill_to_adhesion_structure("./bunny2.0.gcode", 13, "blob")
+    replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
+    replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "blob")
+    heating_top_layer("./cylinder.gcode", 7)

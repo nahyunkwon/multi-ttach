@@ -554,6 +554,10 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
     for m in mesh.split("\n"):
         if "F300" in m:
             m = m.replace("F300", "F9500")
+        if "Z" in m and type == "blob":
+            z = m.split("Z")[1]
+            new_z = float(z) - 0.2
+            m = m.replace("Z"+str(z), "Z"+str(round(new_z, 2)))
         mesh_f_replaced += m + "\n"
 
     is_target = 0
@@ -706,7 +710,7 @@ if __name__ == "__main__":
     #target_layer = 4
 
     #replace_infill_to_adhesion_structure("./cuberelative.gcode", 8, "grid")
-    #replace_infill_to_adhesion_structure("./cylinder0.2.gcode", 6, "blob")
+    replace_infill_to_adhesion_structure("./cylinder0.2.gcode", 6, "blob")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
@@ -715,5 +719,5 @@ if __name__ == "__main__":
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
 
     #get_grid_points_for_target_layer("./cube.gcode", 4, 2)
-    get_grid_points_for_target_layer("./cylinder0.2.gcode", 6, 2)
+    #get_grid_points_for_target_layer("./cylinder0.2.gcode", 6, 2)
     #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)

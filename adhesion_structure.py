@@ -89,7 +89,7 @@ def heating_top_layer(layer_no):
             after_half_layer += lines[i]
 
 
-    print(layer_no)
+    #print(layer_no)
     newcode = open("multidogbone.gcode", "wt")
     withoutheat = open("dogbonewithoutheat.gcode", "wt")
     n = newcode.write(head + half_layer + pausecode + "\n" + goback + "\n" + "\n;REPEAT LAYER\n"+ replaced + after_half_layer)
@@ -142,7 +142,7 @@ def get_largest_polygon(x_values, y_values):
     max_area = areas[0]
     max_index = 0
 
-    print(areas)
+    #print(areas)
 
     for i in range(len(areas)):
         if areas[i] > max_area:
@@ -277,9 +277,9 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     for i in range(len(a_x)):
         a_coords.append([a_x[i], a_y[i]])
 
-    print(a_coords)
+    #print(a_coords)
 
-    print(sorted(a_coords, key=lambda x: x[1]))
+    #print(sorted(a_coords, key=lambda x: x[1]))
 
     # x and y values for b structure
     b_x = []
@@ -291,12 +291,12 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             b_x.append(a_coords[i][0] + gap/2)
             b_y.append(a_coords[i][1] + gap/2)
 
-
+    '''
     plt.plot(x_values, y_values, 'ro')
     plt.plot(a_x, a_y, 'bo')
     plt.plot(b_x, b_y, 'go')
     plt.show()
-
+    '''
     return a_x, a_y, b_x, b_y
 
 
@@ -435,8 +435,8 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
 
     b_final = get_zig_zag_for_lines(b_x, b_y)
 
-    print(a_final)
-    print(b_final)
+    #print(a_final)
+    #print(b_final)
     
     # a-structure
     g0 = "G0 F9500 "
@@ -468,8 +468,9 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     return a_structure, b_structure
 
 
-def generate_full_infill(a_x, a_y, gap=0.8):
-    arbitrary = 0.1  # arbitrary number to optimize extrusion amount
+def generate_full_infill(a_x, a_y, gap=0.2):
+
+    arbitrary = 0.4  # arbitrary number to optimize extrusion amount
 
     # a-structure
 
@@ -510,13 +511,13 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
     if type == "grid":
         gap = 2
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
-        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.8)
+        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.6)
         a_structure, b_structure = generate_grid_infill(a_x, a_y, b_x, b_y, gap)
         full_structure = generate_full_infill(f_x, f_y)
     elif type == "blob":
         gap = 2
         a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
-        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.8)
+        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.6)
         a_structure, b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
         full_structure = generate_full_infill(f_x, f_y)
 
@@ -602,8 +603,31 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             else:
                 modified += l
 
+        structured = modified.split("\n")
+
+        final = ""
+
+        for l in structured:
+            l += "\n"
+            if ";LAYER:" + str(target_layer - 3) + "\n" in l \
+                    or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # target layer
+                is_target = 1
+
+            if is_target == 1 and ";TYPE:FILL" in l:
+                final += l
+                is_infill = 1
+
+            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+                is_target = 0
+                is_infill = 0
+                final += full_structure
+            elif is_target == 1 and is_infill == 1:
+                pass
+            else:
+                final += l
+
         with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
-            f.write(modified)
+            f.write(final)
 
     elif type == "blob":
         # add a and b structure
@@ -613,7 +637,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 is_target = 1
                 if ";LAYER:" + str(target_layer + 1) + "\n" in l:
                     is_b = 1
-                    modified += mesh_f_replaced + "\n"
+                    #modified += mesh_f_replaced + "\n"
 
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
@@ -639,8 +663,31 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             else:
                 modified += l
 
+        structured = modified.split("\n")
+
+        final = ""
+
+        for l in structured:
+            l += "\n"
+            if ";LAYER:" + str(target_layer - 1) + "\n" in l\
+                    or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # target layer
+                is_target = 1
+
+            if is_target == 1 and ";TYPE:FILL" in l:
+                final += l
+                is_infill = 1
+
+            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
+                is_target = 0
+                is_infill = 0
+                final += full_structure
+            elif is_target == 1 and is_infill == 1:
+                pass
+            else:
+                final += l
+
         with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
-            f.write(modified)
+            f.write(final)
 
 
 def unit_square_is_included(p, gap, coords):
@@ -658,7 +705,7 @@ if __name__ == "__main__":
     #file_name = "./cube.gcode"
     #target_layer = 4
 
-    replace_infill_to_adhesion_structure("./cube.gcode", 7, "grid")
+    replace_infill_to_adhesion_structure("./cuberelative.gcode", 8, "grid")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")

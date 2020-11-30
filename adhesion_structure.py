@@ -44,14 +44,14 @@ def heating_top_layer(file_name, layer_no):
 # Get header part of code
     for l in lines:
 
-        if ";LAYER:" + str(int(layer_no)) in l:
+        if ";LAYER:" + str(int(layer_no)) + "\n" in l:
             break
         else:
             head += l
 
 #Get layer to be repeated and remove the E commands
     for i in range(len(lines)):
-        if ";LAYER:"+str(int(layer_no)) in lines[i]:
+        if ";LAYER:"+str(int(layer_no)) + "\n" in lines[i]:
             flag = "yes"
 
         elif ";LAYER:" in lines[i]:
@@ -79,8 +79,6 @@ def heating_top_layer(file_name, layer_no):
             for k in range(len(split_layer)):
                 if "E" in split_layer[k]:
                     split_layer[k]="\n"
-
-
 
             for j in range(len(split_layer)):
                 replaced += split_layer[j] + " "
@@ -300,7 +298,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
     plt.plot(x_values, y_values, 'ro')
     plt.plot(a_x, a_y, 'bo')
-    plt.plot(b_x, b_y, 'go')
+    #plt.plot(b_x, b_y, 'go')
     plt.show()
 
     return a_x, a_y, b_x, b_y
@@ -443,7 +441,7 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
 
     #print(a_final)
     #print(b_final)
-    
+
     # a-structure
     g0 = "G0 F9500 "
     g1 = "G1 F9500 "
@@ -548,7 +546,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             pop_list.append(index)
 
         index += 1
-   
+
     lines_a = lines
     lines = []
     for i in range(len(lines_a)):
@@ -720,15 +718,18 @@ if __name__ == "__main__":
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
 
-    #get_grid_points_for_target_layer("./cube.gcode", 4, 2)
-    #get_grid_points_for_target_layer("./cylinder0.2.gcode", 6, 2)
-    #get_grid_points_for_target_layer("./bunny0.2.gcode", 13, 2)
+    #get_grid_points_for_target_layer("./cube.gcode", 4, 0.4)
+    #get_grid_points_for_target_layer("./cylinder.gcode", 6, 2)
+    get_grid_points_for_target_layer("./bunny.gcode", 13, 2)
 
     #replace_infill_to_adhesion_structure("./bunny2.0.gcode", 13, "blob")
-    replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
-    replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "blob")
-    heating_top_layer("./cylinder.gcode", 7)
+    #eplace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
+
+    #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
+    #heating_top_layer("./cylinder.gcode", 5)

@@ -296,10 +296,10 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             b_y.append(a_coords[i][1] + gap/2)
 
 
-    plt.plot(x_values, y_values, 'ro')
-    plt.plot(a_x, a_y, 'bo')
+    #plt.plot(x_values, y_values, 'ro')
+    #plt.plot(a_x, a_y, 'bo')
     #plt.plot(b_x, b_y, 'go')
-    plt.show()
+    #plt.show()
 
     return a_x, a_y, b_x, b_y
 
@@ -323,6 +323,8 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
 
     a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+    a_final = get_zig_zag_for_lines(a_x, a_y)
 
     for i in range(len(a_x)):
         if i+1 < len(a_x):
@@ -725,11 +727,13 @@ if __name__ == "__main__":
 
     #get_grid_points_for_target_layer("./cube.gcode", 4, 0.4)
     #get_grid_points_for_target_layer("./cylinder.gcode", 6, 2)
-    get_grid_points_for_target_layer("./bunny.gcode", 13, 2)
+    #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)
 
     #replace_infill_to_adhesion_structure("./bunny2.0.gcode", 13, "blob")
     #eplace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
 
+    replace_infill_to_adhesion_structure("./CE3_adhesiontest_relative.gcode", 225, "grid")
+    #replace_infill_to_adhesion_structure("./CE3_adhesiontest_relative.gcode", 225, "blob")
     #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
     #heating_top_layer("./cylinder.gcode", 5)

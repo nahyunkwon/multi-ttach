@@ -327,13 +327,14 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     a_final = get_zig_zag_for_lines(a_x, a_y)
 
     for i in range(len(a_x)):
-        if i+1 < len(a_x):
-            if a_x[i+1] == a_x[i]:  # at the same line (y-axis)
-                a_structure += g1 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + " E" + str(extrusion) + "\n"
-            elif a_x[i+1] > a_x[i]:  # next line
-                a_structure += g0 + "X" + str(a_x[i+1]) + " Y" + str(a_y[i+1]) + "\n"
+        if i + 1 < len(a_x):
+            if a_final[i + 1][0] == a_final[i][0]:  # at the same line (y-axis)
+                a_structure += g1 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + " E" + str(
+                    extrusion) + "\n"
+            elif a_final[i + 1][0] > a_final[i][0]:  # next line
+                a_structure += g0 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + "\n"
 
-    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    a_structure += g0 + "X" + str(a_final[0][0]) + " Y" + str(a_final[0][1]) + "\n"
 
     a_coords = []  # coordinates of a structure
 
@@ -344,12 +345,23 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
+    print(y_sorted)
+
+    v_x = []
+    v_y = []
+
     for i in range(len(y_sorted)):
-        if i+1 < len(y_sorted):
-            if y_sorted[i+1][1] == y_sorted[i][1]:  # at the same line (x-axis)
-                a_structure += g1 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + " E" + str(extrusion) + "\n"
+        v_x.append(y_sorted[i][0])
+        v_y.append(y_sorted[i][1])
+
+    v_final = get_zig_zag_for_lines_for_y(v_x, v_y)
+
+    for i in range(len(v_final)):
+        if i + 1 < len(v_final):
+            if v_final[i + 1][1] == v_final[i][1]:  # at the same line (x-axis)
+                a_structure += g1 + "X" + str(v_final[i + 1][0]) + " Y" + str(v_final[i + 1][1]) + " E" + str(extrusion) + "\n"
             elif a_x[i + 1] > a_x[i]:  # next line
-                a_structure += g0 + "X" + str(y_sorted[i+1][0]) + " Y" + str(y_sorted[i+1][1]) + "\n"
+                a_structure += g0 + "X" + str(v_final[i + 1][0]) + " Y" + str(v_final[i + 1][1]) + "\n"
 
     # b-structure
     b_structure = ""
@@ -380,6 +392,42 @@ def get_zig_zag_for_lines(x, y):
         if x[i + 1] == x[i]:  # at the same line
             line.append([x[i + 1], y[i + 1]])
         elif x[i + 1] > x[i]:  # next line
+            if len(final) % 2 == 0:
+                final.append(line)
+                line = []
+            else:
+                line.reverse()
+                final.append(line)
+                line = []
+            line.append([x[i+1], y[i+1]])
+
+    line.append([x[-1], y[-1]])
+    if len(final) % 2 == 0:
+        final.append(line)
+    else:
+        line.reverse()
+        final.append(line)
+
+    result = []
+
+    for f in final:
+        for i in f:
+            result.append(i)
+
+    return result
+
+
+def get_zig_zag_for_lines_for_y(x, y):
+
+    final = []
+    line = []
+
+    line.append([x[0], y[0]])
+
+    for i in range(len(y) - 1):
+        if y[i + 1] == y[i]:  # at the same line
+            line.append([x[i + 1], y[i + 1]])
+        elif y[i + 1] > y[i]:  # next line
             if len(final) % 2 == 0:
                 final.append(line)
                 line = []
@@ -733,7 +781,7 @@ if __name__ == "__main__":
     #eplace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
 
-    replace_infill_to_adhesion_structure("./CE3_adhesiontest_relative.gcode", 225, "grid")
+    replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
     #replace_infill_to_adhesion_structure("./CE3_adhesiontest_relative.gcode", 225, "blob")
     #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
     #heating_top_layer("./cylinder.gcode", 5)

@@ -638,7 +638,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                 modified += l
                 is_infill = 1
 
-            if ";TIME_ELAPSED" in l and is_target == 1 and is_infill == 1:
+            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
                 is_infill = 0
                 if is_b == 0:
@@ -782,7 +782,7 @@ if __name__ == "__main__":
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
-    replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
-    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 10, "grid")
+    #replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
+    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 10, "blob")
     #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
     #heating_top_layer("./cylinder.gcode", 5)

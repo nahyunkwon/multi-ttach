@@ -582,7 +582,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     pop_list = []
     index = 0
-    # get mesh code
+    # get mesh code of the target layer
     for l in lines:
         if ";LAYER:" + str(target_layer) + "\n" in l:
             is_target = 1
@@ -621,9 +621,14 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     is_b = 0
 
+    mesh_each = ""
+    is_mesh = 0
+
+    # grid structure
     if type == "grid":
         layer = 0
         for l in lines:
+            # generate grid structure for 4 layers including target layer
             if ";LAYER:" + str(target_layer - 2) + "\n" in l \
                     or ";LAYER:" + str(target_layer - 1) + "\n" in l \
                     or ";LAYER:" + str(target_layer) + "\n" in l \
@@ -637,13 +642,23 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
                 is_infill = 1
+            if is_target == 1 and ";MESH:NONMESH" in l:
+                is_mesh = 1
+                #mesh_each += l
+
+            if is_mesh == 1 and is_target == 1:
+                mesh_each += l
 
             if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
+                is_mesh = 0
                 is_target = 0
                 is_infill = 0
-                if is_b == 0:
+                if is_b == 0:  # a structure
 
                     modified += a_structure
+                    modified += mesh_each
+                    print(mesh_each)
+                    mesh_each = ""
                     if layer == target_layer:
                         modified += "\n"
                         modified += mesh + "\n"
@@ -654,6 +669,9 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                         modified += mesh_f_replaced + "\n"
                 else:
                     modified += b_structure
+                    modified += mesh_each
+                    mesh_each = ""
+                    is_mesh = 0
                     is_b = 0
                 #modified += ";MESH:NONMESH\n"
             elif is_target == 1 and is_infill == 1:
@@ -687,6 +705,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
         with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
             f.write(final)
 
+    # blob structure
     elif type == "blob":
         # add a and b structure
         for l in lines:
@@ -783,6 +802,7 @@ if __name__ == "__main__":
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
     #replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
-    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 10, "blob")
+    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 190, "grid")
+    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 190, "blob")
     #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
     #heating_top_layer("./cylinder.gcode", 5)

@@ -306,7 +306,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
 def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
-    arbitrary = 0.1  # arbitrary number to optimize extrusion amount
+    arbitrary = 0.08  # arbitrary number to optimize extrusion amount
 
     # a-structure
 
@@ -781,7 +781,8 @@ if __name__ == "__main__":
     #eplace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
     #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
 
-    replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
-    #replace_infill_to_adhesion_structure("./CE3_adhesiontest_relative.gcode", 225, "blob")
+    #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
+    replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
+    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 10, "grid")
     #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
     #heating_top_layer("./cylinder.gcode", 5)

@@ -12,9 +12,9 @@
 M140 S50
 M105
 M190 S50
-M104 S220
+M104 S200
 M105
-M109 S220
+M109 S200
 M82 ;absolute extrusion mode
 ; Ender 3 Custom Start G-code
 G92 E0 ; Reset Extruder

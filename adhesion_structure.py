@@ -802,7 +802,7 @@ if __name__ == "__main__":
 
     #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
     #replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
-    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 190, "grid")
-    replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 190, "blob")
+    replace_infill_to_adhesion_structure("./gcode/sandal_blob.gcode", 28, "blob")
+    #replace_infill_to_adhesion_structure("./CE3_d2095.gcode", 190, "blob")
     #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
     #heating_top_layer("./cylinder.gcode", 5)

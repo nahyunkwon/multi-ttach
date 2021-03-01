@@ -31,17 +31,17 @@ def heating_top_layer(file_name, layer_no):
     goback = ""
     goback2 = ""
 
-#Get pausecode
+    # Get pausecode
     for p in pauselines:
         pausecode += p
 
-#Get total layer count
+    # Get total layer count
     for i in range(len(lines)):
 
         if ";LAYER_COUNT:" in lines[i]:
             countline = lines[i].split(":")
             layer_count = int(countline[1])
-# Get header part of code
+    # Get header part of code
     for l in lines:
 
         if ";LAYER:" + str(int(layer_no)) + "\n" in l:
@@ -49,7 +49,7 @@ def heating_top_layer(file_name, layer_no):
         else:
             head += l
 
-#Get layer to be repeated and remove the E commands
+    # Get layer to be repeated and remove the E commands
     for i in range(len(lines)):
         if ";LAYER:"+str(int(layer_no)) + "\n" in lines[i]:
             flag = "yes"
@@ -85,7 +85,7 @@ def heating_top_layer(file_name, layer_no):
 
 
 
-#Get rest of the code
+    #Get rest of the code
     for i in range(len(lines)):
         if ";LAYER:"+str(int(layer_no)+1) in lines[i]:
             layer_flag = "yes"
@@ -554,7 +554,14 @@ def generate_full_infill(a_x, a_y, gap=0.2):
     return a_structure
 
 
-def replace_infill_to_adhesion_structure(file_name, target_layer, type):
+def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
+    '''
+    replace infill of the target layer to adhesion structure
+    :param file_name: location of source gcode file
+    :param target_layer: target layer
+    :param type: type of adhesion structure
+    :return: null
+    '''
 
     gcode = open(file_name)
 
@@ -708,8 +715,12 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             else:
                 final += l
 
-        with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
-            f.write(final)
+        if flag == 0:
+            with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
+                f.write(final)
+        elif flag == 1:
+            with open(file_name, "w") as f:
+                f.write(final)
 
     # blob structure
     elif type == "blob":
@@ -776,11 +787,16 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             else:
                 final += l
 
-        with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
-            f.write(final)
+        if flag == 0:
+            with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
+                f.write(final)
+        elif flag == 1:
+            with open(file_name, "w") as f:
+                f.write(final)
 
 
 def unit_square_is_included(p, gap, coords):
+
     if [p[0] + gap, p[1]] not in coords:
         return False
     if [p[0], p[1] + gap] not in coords:
@@ -789,6 +805,19 @@ def unit_square_is_included(p, gap, coords):
         return False
 
     return True
+
+
+def adhesion_structure(file_name, target_layers, type):
+
+    target_layers.sort()
+
+    # todo: handle layer number issue (what if the layer number is invalid??
+
+    replace_infill_to_adhesion_structure(file_name, target_layers[0], type, flag=0)
+
+    if len(target_layers) > 1:
+        for i in range(1, len(target_layers)):
+            replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i], type, flag=1)
 
 
 if __name__ == "__main__":
@@ -816,7 +845,9 @@ if __name__ == "__main__":
     #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
     #replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
     #replace_infill_to_adhesion_structure("./gcode/sandal_blob.gcode", 28, "blob")
-    replace_infill_to_adhesion_structure("./gcode/CE3_d2095_100_infill.gcode", 190, "blob")
-    replace_infill_to_adhesion_structure("./gcode/CE3_d2095_100_infill.gcode", 190, "grid")
-    #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
-    #heating_top_layer("./cylinder.gcode", 5)
+    #replace_infill_to_adhesion_structure("./gcode/CE3_d2095_100_infill.gcode", 190, "blob")
+    #replace_infill_to_adhesion_structure("./gcode/CE3_d2095_100_infill0.gcode", 190, "grid")
+
+    adhesion_structure("./gcode/sandal.gcode", [15, 24], "blob")
+    adhesion_structure("./gcode/sandal.gcode", [15, 24], "grid")
+

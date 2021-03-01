@@ -345,7 +345,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
-    print(y_sorted)
+    #print(y_sorted)
 
     v_x = []
     v_y = []
@@ -642,6 +642,9 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
                 is_infill = 1
+            if is_target == 1 and ";TYPE:SKIN" in l:
+                modified += l
+                is_infill = 1
             if is_target == 1 and ";MESH:NONMESH" in l:
                 is_mesh = 1
                 #mesh_each += l
@@ -657,7 +660,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
                     modified += a_structure
                     modified += mesh_each
-                    print(mesh_each)
+                    #print(mesh_each)
                     mesh_each = ""
                     if layer == target_layer:
                         modified += "\n"
@@ -692,6 +695,9 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
             if is_target == 1 and ";TYPE:FILL" in l:
                 final += l
                 is_infill = 1
+            if is_target == 1 and ";TYPE:SKIN" in l:
+                modified += l
+                is_infill = 1
 
             if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
@@ -717,6 +723,10 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
                     #modified += mesh_f_replaced + "\n"
 
             if is_target == 1 and ";TYPE:FILL" in l:
+                modified += l
+                is_infill = 1
+
+            if is_target == 1 and ";TYPE:SKIN" in l:
                 modified += l
                 is_infill = 1
 
@@ -752,6 +762,9 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
             if is_target == 1 and ";TYPE:FILL" in l:
                 final += l
+                is_infill = 1
+            if is_target == 1 and ";TYPE:SKIN" in l:
+                modified += l
                 is_infill = 1
 
             if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:

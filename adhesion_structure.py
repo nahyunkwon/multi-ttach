@@ -820,34 +820,69 @@ def adhesion_structure(file_name, target_layers, type):
             replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i], type, flag=1)
 
 
+def adhesion_structure_horizontal(file_name):
+
+    gcode = open(file_name)
+
+    lines = gcode.readlines()
+
+    extruder = 0
+    layer = 0
+    is_infill = 0
+    infills = []
+    layer_count = 0
+    all_layers = []
+
+    for l in lines:
+        if "T0" in l:
+            extruder = 0
+        elif "T1" in l:
+            extruder = 1
+        elif ";LAYER:" in l:
+            layer = int(l.split(":")[1].strip())
+
+        if ";TYPE:WALL-INNER" in l:
+            is_infill = 1
+        elif is_infill == 1 and ";TYPE:" in l:
+            is_infill = 0
+
+        if is_infill == 1:
+            infills.append([layer, extruder, l.split("\n")[0]])
+            all_layers.append([layer, extruder])
+
+        if ";LAYER_COUNT:" in l:
+            layer_count = int(l.split(":")[-1].strip())
+
+    layers_drop_dups = []
+
+    for i in all_layers:
+        if i not in layers_drop_dups:
+            layers_drop_dups.append(i)
+
+    layer_df = pd.DataFrame(layers_drop_dups, columns=['layer', 'extruder'])
+
+    layer_df = layer_df.groupby(['layer']).size().reset_index(name='count')
+
+    multi_layers = []
+
+    for i in range(len(layer_df)):
+        if layer_df.iloc[i]['count'] > 1:
+            multi_layers.append(layer_df.iloc[i]['layer'])
+
+    flag = 0
+    points_0 = []
+    points_1 = []
+
+    #for i in range(len(infills)):
+     #   points_0 = []
+      #  points_1 = []
+#       print(infills)
+
+
 if __name__ == "__main__":
-    #file_name = "./cube.gcode"
-    #target_layer = 4
 
-    #replace_infill_to_adhesion_structure("./cuberelative.gcode", 8, "grid")
-    #replace_infill_to_adhesion_structure("./cylinder0.2.gcode", 6, "blob")
+    #adhesion_structure("./gcode/sandal.gcode", [15, 24], "blob")
+    #adhesion_structure("./gcode/sandal.gcode", [15, 24], "grid")
 
-    #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
-    #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
-    #replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
-
-    #replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
-    #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
-
-    #get_grid_points_for_target_layer("./cube.gcode", 4, 0.4)
-    #get_grid_points_for_target_layer("./cylinder.gcode", 6, 2)
-    #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)
-
-    #replace_infill_to_adhesion_structure("./bunny2.0.gcode", 13, "blob")
-    #eplace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
-    #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
-
-    #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
-    #replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
-    #replace_infill_to_adhesion_structure("./gcode/sandal_blob.gcode", 28, "blob")
-    #replace_infill_to_adhesion_structure("./gcode/CE3_d2095_100_infill.gcode", 190, "blob")
-    #replace_infill_to_adhesion_structure("./gcode/CE3_d2095_100_infill0.gcode", 190, "grid")
-
-    adhesion_structure("./gcode/sandal.gcode", [15, 24], "blob")
-    adhesion_structure("./gcode/sandal.gcode", [15, 24], "grid")
+    adhesion_structure_horizontal("./gcode_dual/FCPRO_cuboids.gcode")
 

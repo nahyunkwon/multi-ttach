@@ -826,12 +826,15 @@ def adhesion_structure_horizontal(file_name):
 
     lines = gcode.readlines()
 
+    # get inner wall
     extruder = 0
     layer = 0
-    is_infill = 0
-    infills = []
+    is_inner_wall = 0
+    inner_walls = []
     layer_count = 0
     all_layers = []
+
+    set = ""
 
     for l in lines:
         if "T0" in l:
@@ -842,17 +845,29 @@ def adhesion_structure_horizontal(file_name):
             layer = int(l.split(":")[1].strip())
 
         if ";TYPE:WALL-INNER" in l:
-            is_infill = 1
-        elif is_infill == 1 and ";TYPE:" in l:
-            is_infill = 0
+            is_inner_wall = 1
+        elif is_inner_wall == 1 and ";TYPE:" in l:
+            is_inner_wall = 0
 
-        if is_infill == 1:
-            infills.append([layer, extruder, l.split("\n")[0]])
+        if is_inner_wall == 1:
+            if len(inner_walls) == 0:
+                set += l
+                inner_walls.append([layer, extruder, set])
+            else:
+                if inner_walls[-1][0] == layer and inner_walls[-1][1] == extruder:
+                    set += l
+                    inner_walls[-1][2] = set
+                else:
+                    set = l
+                    inner_walls.append([layer, extruder, set])
+
+            #inner_walls.append([layer, extruder, l])
             all_layers.append([layer, extruder])
 
         if ";LAYER_COUNT:" in l:
             layer_count = int(l.split(":")[-1].strip())
 
+    # get multimaterial layers
     layers_drop_dups = []
 
     for i in all_layers:
@@ -869,6 +884,14 @@ def adhesion_structure_horizontal(file_name):
         if layer_df.iloc[i]['count'] > 1:
             multi_layers.append(layer_df.iloc[i]['layer'])
 
+    # get inner walls of multimaterial layers
+    multi_inner_walls = []
+
+    for i in range(len(inner_walls)):
+        if inner_walls[i][0] in multi_layers:  # if the layer contains two materials
+            multi_inner_walls.append(inner_walls[i])
+
+    #print(multi_inner_walls)
     flag = 0
     points_0 = []
     points_1 = []
@@ -879,10 +902,68 @@ def adhesion_structure_horizontal(file_name):
 #       print(infills)
 
 
+    # get outer wall
+    is_outer_wall = 0
+    extruder = 0
+    layer = 0
+    set = ""
+
+    outer_walls = []
+
+    for l in lines:
+        if "T0" in l:
+            extruder = 0
+        elif "T1" in l:
+            extruder = 1
+        elif ";LAYER:" in l:
+            layer = int(l.split(":")[1].strip())
+
+        if layer in multi_layers:
+            if ";TYPE:WALL-OUTER" in l:
+                is_outer_wall = 1
+            elif is_outer_wall == 1 and ";" in l:
+                is_outer_wall = 0
+
+            if is_outer_wall == 1:
+                #outer_walls.append([layer, extruder, l])
+                if len(outer_walls) == 0:
+                    set += l
+                    outer_walls.append([layer, extruder, set])
+                else:
+                    if outer_walls[-1][0] == layer and outer_walls[-1][1] == extruder:
+                        set += l
+                        outer_walls[-1][2] = set
+                    else:
+                        set = l
+                        outer_walls.append([layer, extruder, set])
+
+    for i in outer_walls:
+        print(i)
+    '''
+    # get individual outer wall polygons
+    current_extruder = -1
+    polygons = []
+    current_polygon = []
+
+    for layer in multi_layers:
+        for i in outer_walls:
+            if i[1] !=
+    '''
+
+
+#def get_adjacent_points_set(polygons):
+
+ #   for i in range(len(polygons)):
+  #      polygons
+
+
 if __name__ == "__main__":
 
     #adhesion_structure("./gcode/sandal.gcode", [15, 24], "blob")
     #adhesion_structure("./gcode/sandal.gcode", [15, 24], "grid")
+    adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
+    adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
 
-    adhesion_structure_horizontal("./gcode_dual/FCPRO_cuboids.gcode")
+
+    #adhesion_structure_horizontal("./gcode_dual/FCPRO_cuboids.gcode")
 

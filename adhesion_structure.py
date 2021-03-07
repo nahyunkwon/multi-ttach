@@ -878,17 +878,17 @@ def adhesion_structure_horizontal(file_name):
 
     layer_df = layer_df.groupby(['layer']).size().reset_index(name='count')
 
-    multi_layers = []
+    multi_layers_number = []
 
     for i in range(len(layer_df)):
         if layer_df.iloc[i]['count'] > 1:
-            multi_layers.append(layer_df.iloc[i]['layer'])
+            multi_layers_number.append(layer_df.iloc[i]['layer'])
 
     # get inner walls of multimaterial layers
     multi_inner_walls = []
 
     for i in range(len(inner_walls)):
-        if inner_walls[i][0] in multi_layers:  # if the layer contains two materials
+        if inner_walls[i][0] in multi_layers_number:  # if the layer contains two materials
             multi_inner_walls.append(inner_walls[i])
 
     #print(multi_inner_walls)
@@ -918,7 +918,7 @@ def adhesion_structure_horizontal(file_name):
         elif ";LAYER:" in l:
             layer = int(l.split(":")[1].strip())
 
-        if layer in multi_layers:
+        if layer in multi_layers_number:
             if ";TYPE:WALL-OUTER" in l:
                 is_outer_wall = 1
             elif is_outer_wall == 1 and ";" in l:
@@ -937,8 +937,10 @@ def adhesion_structure_horizontal(file_name):
                         set = l
                         outer_walls.append([layer, extruder, set])
 
-    for i in outer_walls:
-        print(i)
+    #for i in outer_walls:
+    #    print(i)
+
+
     '''
     # get individual outer wall polygons
     current_extruder = -1
@@ -950,6 +952,40 @@ def adhesion_structure_horizontal(file_name):
             if i[1] !=
     '''
 
+    # plt.plot(x_values, y_values, 'ro')
+    # plt.plot(a_x, a_y, 'bo')
+    # plt.plot(b_x, b_y, 'go')
+    # plt.show()
+
+    outer_walls_df = pd.DataFrame(outer_walls, columns=['layer', 'extruder', 'commands'])
+
+    polygons_x_list = []
+    polygons_y_list = []
+
+    for i in range(len(outer_walls)):
+        commands = outer_walls[i][2].split("\n")
+        extruder = outer_walls[i][1]
+        polygons_x, polygons_y = get_polygons_of_wall(commands)
+        polygons_x_list.append(polygons_x)
+        polygons_y_list.append(polygons_y)
+
+        #outer_walls_df.loc['polygon_x'][i] = polygons_x
+        #outer_walls_df.iloc[i]['polygon_y'] = polygons_y
+
+    outer_walls_df['polygons_x'] = polygons_x_list
+    outer_walls_df['polygons_y'] = polygons_y_list
+
+    print(outer_walls_df)
+
+    #for i in multi_layers_number:
+     #   current_layer_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
+      #  print(current_layer_df)
+
+
+    #plt.plot(g1_x, g1_y, 'ro')
+    #plt.plot(g0_x, g0_y, 'bo')
+
+    #plt.show()
 
 #def get_adjacent_points_set(polygons):
 
@@ -957,13 +993,43 @@ def adhesion_structure_horizontal(file_name):
   #      polygons
 
 
+def get_polygons_of_wall(commands):
+
+    g1_x = []
+    g1_y = []
+
+    # g0_x = []
+    # g0_y = []
+
+    polygons_x = []
+    polygons_y = []
+    flag = 0
+
+    for c in commands:
+        if "G1" in c:
+            words = c.split(" ")
+            for w in words:
+                if "X" in w:
+                    flag = 0
+                    g1_x.append(w.split("X")[1])
+                elif "Y" in w:
+                    g1_y.append(w.split("Y")[1])
+        elif "G0" in c and flag == 0:  # next polygon
+            flag = 1
+            polygons_x.append(g1_x)
+            polygons_y.append(g1_y)
+
+    return polygons_x, polygons_y
+
+
 if __name__ == "__main__":
 
     #adhesion_structure("./gcode/sandal.gcode", [15, 24], "blob")
     #adhesion_structure("./gcode/sandal.gcode", [15, 24], "grid")
-    adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
-    adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
+    #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
+    #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
+    #adhesion_structure("./gcode/CE3_d2095_small.gcode", [125], "blob")
+    #adhesion_structure("./gcode/CE3_d2095_small.gcode", [125], "grid")
 
-
-    #adhesion_structure_horizontal("./gcode_dual/FCPRO_cuboids.gcode")
+    adhesion_structure_horizontal("./gcode_dual/FCPRO_cuboids.gcode")
 

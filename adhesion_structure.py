@@ -1058,7 +1058,7 @@ def adhesion_structure_horizontal(file_name):
 
             fair_dist = 3
 
-            direction = 0  # 0: horizontal, 1: vertical
+            # direction = 0  # 0: horizontal, 1: vertical
 
             if x_max - x_min < y_max - y_min:
                 direction = 0
@@ -1078,9 +1078,15 @@ def adhesion_structure_horizontal(file_name):
                 y_max += fair_dist
 
             stitch_x, stitch_y = generate_adjacent_stitch(x_min, x_max, y_min, y_max)
-            stitches.append([direction, stitch_x, stitch_y])
+
+            stitch = generate_full_infill_for_horizontal_stitch(stitch_x, stitch_y, direction)
+            stitches.append(stitch)
 
         stitches_per_layer.append([i, stitches])
+
+    stitch_df = pd.DataFrame(stitches_per_layer, columns=['layer', 'stitch'])
+    print(stitch_df)
+
 
     '''
 
@@ -1205,12 +1211,58 @@ def adhesion_structure_horizontal(file_name):
     plt.show()
     
     '''
-    
+
 
 #def get_adjacent_points_set(polygons):
 
  #   for i in range(len(polygons)):
   #      polygons
+
+
+def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):
+
+    arbitrary = 0.4  # arbitrary number to optimize extrusion amount
+
+    # a-structure
+
+    g0 = "G0 F9500 "
+    g1 = "G1 F2000 "
+
+    a_structure = ""
+
+    layer_height = 0.2
+    nozzle_dia = 0.4
+    length = gap
+    fa = ((1.75 / 2) ** 2) / math.pi
+
+    extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
+
+    if direction == 0:
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+        for i in range(len(a_x)):
+            if i + 1 < len(a_x):
+                if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
+                    a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                elif a_x[i + 1] > a_x[i]:  # next line
+                    a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
+
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+    elif direction == 1:
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+        for i in range(len(a_y)):
+            if i + 1 < len(a_y):
+                if a_y[i + 1] == a_y[i]:  # at the same line (x-axis)
+                    a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                elif a_y[i + 1] > a_y[i]:  # next line
+                    a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
+
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+
+    return a_structure
+
 
 def generate_adjacent_stitch(x_min, x_max, y_min, y_max):
 

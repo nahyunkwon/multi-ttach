@@ -1036,7 +1036,7 @@ def adhesion_structure_horizontal(file_name):
             adjacency_set.append(adjacency)
             adjacency = []
 
-        stitches = []
+        stitches = ";TYPE:STITCH\n"
 
         for j in range(len(adjacency_set)):
             adj_points = adjacency_set[j]
@@ -1048,7 +1048,7 @@ def adhesion_structure_horizontal(file_name):
 
             x_values = []
             y_values = []
-            print(adj_points)
+            #print(adj_points)
             for k in range(len(adj_points)):
                 x_values.append(adj_points[k][0])
                 y_values.append(adj_points[k][1])
@@ -1077,15 +1077,34 @@ def adhesion_structure_horizontal(file_name):
                 y_min -= fair_dist
                 y_max += fair_dist
 
-            stitch_x, stitch_y = generate_adjacent_stitch(x_min, x_max, y_min, y_max)
+            stitch_x, stitch_y = generate_adjacent_stitch(x_min, x_max, y_min, y_max, direction)
 
             stitch = generate_full_infill_for_horizontal_stitch(stitch_x, stitch_y, direction)
-            stitches.append(stitch)
+            stitches += stitch
 
         stitches_per_layer.append([i, stitches])
 
     stitch_df = pd.DataFrame(stitches_per_layer, columns=['layer', 'stitch'])
-    print(stitch_df)
+
+    #print(len(stitch_df))
+
+    # get final gcode
+    final = ""
+    stitch = ""
+
+    for l in lines:
+
+        if ";LAYER:" in l:
+            layer = int(l.split(":")[1].strip())
+
+        if ";MESH:NONMESH" in l and layer in multi_layers_number:
+            stitch = stitch_df.loc[stitch_df['layer'] == int(layer)].iloc[0][1]
+            final += stitch
+
+        final += l
+
+    with open(file_name.split(".gcode")[0] + "_stitched.gcode", "w") as f:
+        f.write(final)
 
 
     '''
@@ -1237,7 +1256,7 @@ def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):
 
     extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
 
-    if direction == 0:
+    if direction == 1:
         a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
         for i in range(len(a_x)):
@@ -1247,9 +1266,9 @@ def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):
                 elif a_x[i + 1] > a_x[i]:  # next line
                     a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
 
-        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+        #a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
-    elif direction == 1:
+    elif direction == 0:
         a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
         for i in range(len(a_y)):
@@ -1259,12 +1278,12 @@ def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):
                 elif a_y[i + 1] > a_y[i]:  # next line
                     a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
 
-        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+        #a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
     return a_structure
 
 
-def generate_adjacent_stitch(x_min, x_max, y_min, y_max):
+def generate_adjacent_stitch(x_min, x_max, y_min, y_max, direction):
 
     grid_points = []
 
@@ -1291,11 +1310,16 @@ def generate_adjacent_stitch(x_min, x_max, y_min, y_max):
 
     #print(x_min, x_max, y_min, y_max)
 
-    for i in range(len(grid_x)):
-        for j in range(len(grid_y)):
-            a_x.append(grid_x[i])
-            a_y.append(grid_y[j])
-
+    if direction == 1:
+        for i in range(len(grid_x)):
+            for j in range(len(grid_y)):
+                a_x.append(grid_x[i])
+                a_y.append(grid_y[j])
+    elif direction == 0:
+        for i in range(len(grid_y)):
+            for j in range(len(grid_x)):
+                a_x.append(grid_x[j])
+                a_y.append(grid_y[i])
     #print(a_x)
     #print(a_y)
 

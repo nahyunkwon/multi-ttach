@@ -900,7 +900,6 @@ def adhesion_structure_horizontal(file_name):
         if inner_walls[i][0] in multi_layers_number:  # if the layer contains two materials
             multi_inner_walls.append(inner_walls[i])
 
-    #print(multi_inner_walls)
     flag = 0
     points_0 = []
     points_1 = []
@@ -945,14 +944,18 @@ def adhesion_structure_horizontal(file_name):
                     else:
                         set = l
                         outer_walls.append([layer, extruder, set])
+                        set = ""
 
 
     # plt.plot(x_values, y_values, 'ro')
     # plt.plot(a_x, a_y, 'bo')
     # plt.plot(b_x, b_y, 'go')
     # plt.show()
-
+    inner_walls_df = pd.DataFrame(multi_inner_walls, columns=['layer', 'extruder', 'commands'])
     outer_walls_df = pd.DataFrame(outer_walls, columns=['layer', 'extruder', 'commands'])
+
+    #for i in range(len(outer_walls_df)):
+    #    print(outer_walls_df.iloc[i]['commands'])
 
     #polygons_x_list = []
     #polygons_y_list = []
@@ -964,17 +967,20 @@ def adhesion_structure_horizontal(file_name):
 
         polygons_list.append(get_polygons_of_wall(commands))
 
-        #polygons_x, polygons_y = get_polygons_of_wall(commands)
-        #polygons_x_list.append(polygons_x)
-        #polygons_y_list.append(polygons_y)
-
-        #outer_walls_df.loc['polygon_x'][i] = polygons_x
-        #outer_walls_df.iloc[i]['polygon_y'] = polygons_y
-
-    #outer_walls_df['polygons_x'] = polygons_x_list
-    #outer_walls_df['polygons_y'] = polygons_y_list
-
     outer_walls_df['polygons'] = polygons_list
+
+    polygons_list = []
+
+    for i in range(len(multi_inner_walls)):
+        commands = multi_inner_walls[i][2].split("\n")
+        extruder = multi_inner_walls[i][1]
+
+        polygons_list.append(get_polygons_of_wall(commands))
+
+    inner_walls_df['polygons'] = polygons_list
+
+
+    #print(inner_walls_df)
 
     #print(outer_walls_df['polygons'])
 
@@ -983,17 +989,25 @@ def adhesion_structure_horizontal(file_name):
     #for i in range(len(outer_walls_df)):
     #    print(len(outer_walls_df.iloc[i]['polygons']))
 
+    stitches_per_layer = []
+
     dist = 0.4
 
     for i in multi_layers_number:
-        current_layer_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
+
+        current_outer_walls_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
+        current_inner_walls_df = inner_walls_df.loc[inner_walls_df['layer'] == i]
 
         adjacency_set = []
 
         # first material
-        polygons_0 = current_layer_df.iloc[0]['polygons']
+        polygons_0 = current_outer_walls_df.iloc[0]['polygons']
         # second material
-        polygons_1 = current_layer_df.iloc[1]['polygons']
+        polygons_1 = current_outer_walls_df.iloc[1]['polygons']
+
+        # inner polygons
+        inner_polygon_0 = current_inner_walls_df.iloc[0]['polygons']
+        inner_polygon_1 = current_inner_walls_df.iloc[1]['polygons']
 
         pairs = []
 
@@ -1002,7 +1016,7 @@ def adhesion_structure_horizontal(file_name):
             for k in range(len(polygons_1)):
                 pairs.append([j, k])
 
-        print(pairs)
+        # print(pairs)
 
         adjacency = []
 
@@ -1013,7 +1027,97 @@ def adhesion_structure_horizontal(file_name):
             for k in range(len(p_0)):
                 for l in range(len(p_1)):
                     if math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]) <= dist:
-                        print(math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]))
+                        # print(math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]))
+                        if p_0[k] not in adjacency:
+                            adjacency.append(p_0[k])
+                        if p_1[l] not in adjacency:
+                            adjacency.append(p_1[l])
+
+            adjacency_set.append(adjacency)
+            adjacency = []
+
+        stitches = []
+
+        for j in range(len(adjacency_set)):
+            adj_points = adjacency_set[j]
+
+            x_min = 0
+            y_min = 0
+            x_max = 0
+            y_max = 0
+
+            x_values = []
+            y_values = []
+            print(adj_points)
+            for k in range(len(adj_points)):
+                x_values.append(adj_points[k][0])
+                y_values.append(adj_points[k][1])
+
+            x_min, x_max = get_min_max(x_values)
+            y_min, y_max = get_min_max(y_values)
+
+            fair_dist = 3
+
+            direction = 0  # 0: horizontal, 1: vertical
+
+            if x_max - x_min < y_max - y_min:
+                direction = 0
+            else:
+                direction = 1
+
+            if direction == 0:  # horizontal alignment
+                x_min -= fair_dist
+                x_max += fair_dist
+                y_min += fair_dist
+                y_max -= fair_dist
+
+            elif direction == 1:  # vertical alignment
+                x_min += fair_dist
+                x_max -= fair_dist
+                y_min -= fair_dist
+                y_max += fair_dist
+
+            stitch_x, stitch_y = generate_adjacent_stitch(x_min, x_max, y_min, y_max)
+            stitches.append([direction, stitch_x, stitch_y])
+
+        stitches_per_layer.append([i, stitches])
+
+    '''
+
+    for i in multi_layers_number:
+        current_outer_walls_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
+        current_inner_walls_df = inner_walls_df.loc[inner_walls_df['layer'] == i]
+
+        adjacency_set = []
+
+        # first material
+        polygons_0 = current_outer_walls_df.iloc[0]['polygons']
+        # second material
+        polygons_1 = current_outer_walls_df.iloc[1]['polygons']
+
+        # inner polygons
+        inner_polygon_0 = current_inner_walls_df.iloc[0]['polygons']
+        inner_polygon_1 = current_inner_walls_df.iloc[1]['polygons']
+
+        pairs = []
+
+        # find material 0 - material 1 pairs
+        for j in range(len(polygons_0)):
+            for k in range(len(polygons_1)):
+                pairs.append([j, k])
+
+        #print(pairs)
+
+        adjacency = []
+
+        for j in range(len(pairs)):
+            p_0 = polygons_0[pairs[j][0]]
+            p_1 = polygons_1[pairs[j][1]]
+
+            for k in range(len(p_0)):
+                for l in range(len(p_1)):
+                    if math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]) <= dist:
+                        #print(math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]))
                         if p_0[k] not in adjacency:
                             adjacency.append(p_0[k])
                         if p_1[l] not in adjacency:
@@ -1021,48 +1125,129 @@ def adhesion_structure_horizontal(file_name):
 
             adjacency_set.append(adjacency)
 
-        print(polygons_0)
-        print(polygons_1)
-
-        print('adjacency')
-        for a in adjacency_set:
-            print(a)
-
-        '''
-        for j in range(len(polygons_0)):
-
-            adjacent_points = []
-
-            # distance between two points of the first and the second material
-            for k in range(len(polygons_0[j])):
-                p_0 = polygons_0[j][k]
-
-                for l in range(len(polygons_1)):
-                    for m in range(len(polygons_1[l])):
-                        p_1 = polygons_1[l][m]
-                        #print(p_1)
-
-                        if math.hypot(p_0[0] - p_1[0], p_0[1] - p_1[1]) <= dist:
-                            adjacent_points.append(p_0)
-                            adjacent_points.append(p_1)
-
-                        if len(adjacent_points) != 0:
-                            adjacency_set.append(adjacent_points)
-                        adjacent_points = []
-
+        stitches = []
 
         print(adjacency_set)
+
+        for j in range(len(adjacency_set)):
+            adj_points = adjacency_set[j]
+
+            x_min = 0
+            y_min = 0
+            x_max = 0
+            y_max = 0
+
+            for k in range(len(adj_points)):
+                if adj_points[k][0] < x_min:
+                    x_min = adj_points[k][0]
+                elif adj_points[k][0] > x_max:
+                    x_max = adj_points[k][0]
+
+                if adj_points[k][1] < y_min:
+                    y_min = adj_points[k][1]
+                elif adj_points[k][1] > y_max:
+                    y_max = adj_points[k][1]
+
+            fair_dist = 5
+            
+            x_min -= fair_dist
+            y_min -= fair_dist
+            x_max += fair_dist
+            y_max += fair_dist
+            
+            
+            
+    
+            
+
+        #for j in range(len(pairs)):
+            #inner_p_0 = inner_polygon_0[pairs[j][0]]
+            #inner_p_1 = inner_polygon_1[pairs[j][1]]
+            #adj_points =
+
+        stitches_per_layer.append([i, stitches])
+        
         '''
 
-    #plt.plot(g1_x, g1_y, 'ro')
-    #plt.plot(g0_x, g0_y, 'bo')
+    '''
+    p_x = []
+    p_y = []
+    for p in adjacency_set[0]:
+        p_x.append(p[0])
+        p_y.append(p[1])
 
-    #plt.show()
+    #print(len(polygons_0[0]))
+   #print(len(polygons_1[0]))
+
+    p_0_x = []
+    p_0_y = []
+    p_1_x = []
+    p_1_y = []
+    p_2_x = []
+    p_2_y = []
+
+    for p in polygons_0[0]:
+        p_0_x.append(p[0])
+        p_0_y.append(p[1])
+    for p in polygons_0[1]:
+        p_1_x.append(p[0])
+        p_1_y.append(p[1])
+    for p in polygons_1[0]:
+        p_2_x.append(p[0])
+        p_2_y.append(p[1])
+
+    plt.plot(p_0_x, p_0_y, 'bo')
+    plt.plot(p_1_x, p_1_y, 'bo')
+    plt.plot(p_2_x, p_2_y, 'yo')
+    plt.plot(stitches[0][0], stitches[0][1], 'mo')
+    plt.plot(stitches[1][0], stitches[1][1], 'ko')
+    plt.plot(p_x, p_y, 'ro')
+    plt.show()
+    
+    '''
+    
 
 #def get_adjacent_points_set(polygons):
 
  #   for i in range(len(polygons)):
   #      polygons
+
+def generate_adjacent_stitch(x_min, x_max, y_min, y_max):
+
+    grid_points = []
+
+    gap = 0.6
+
+    grid_x = []
+    grid_y = []
+
+    current_x = x_min
+    current_y = y_min
+
+    grid_x.append(current_x)
+    grid_y.append(current_y)
+
+    while current_x <= x_max:
+        current_x += gap
+        grid_x.append(current_x)
+    while current_y <= y_max:
+        current_y += gap
+        grid_y.append(current_y)
+
+    a_x = []
+    a_y = []
+
+    #print(x_min, x_max, y_min, y_max)
+
+    for i in range(len(grid_x)):
+        for j in range(len(grid_y)):
+            a_x.append(grid_x[i])
+            a_y.append(grid_y[j])
+
+    #print(a_x)
+    #print(a_y)
+
+    return a_x, a_y
 
 
 def get_polygons_of_wall(commands):
@@ -1079,6 +1264,7 @@ def get_polygons_of_wall(commands):
 
     for c in commands:
         if "G1" in c:
+            flag = 0
             words = c.split(" ")
             for w in words:
                 if "X" in w:
@@ -1091,9 +1277,16 @@ def get_polygons_of_wall(commands):
             polygons_x.append(g1_x)
             polygons_y.append(g1_y)
 
+            g1_x = []
+            g1_y = []
+        elif "G0" in c and flag == 1:
+            pass
+
+    #print(polygons_x)
+    #print(polygons_y)
+
     polygons = []
     poly = []
-    #print(polygons_x)
 
     for i in range(len(polygons_x)):
 
@@ -1101,6 +1294,7 @@ def get_polygons_of_wall(commands):
             poly.append([polygons_x[i][j], polygons_y[i][j]])
 
         polygons.append(poly)
+        poly = []
     #print(polygons)
     #return polygons_x, polygons_y
     return polygons

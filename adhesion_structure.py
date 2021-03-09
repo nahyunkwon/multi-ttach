@@ -884,6 +884,15 @@ def adhesion_structure_horizontal(file_name):
         if layer_df.iloc[i]['count'] > 1:
             multi_layers_number.append(layer_df.iloc[i]['layer'])
 
+    first_or_last = []
+
+    for i in range(len(multi_layers_number)):
+        if multi_layers_number[i] == 0 or multi_layers_number[i] == layer_count - 1:
+            first_or_last.append(i)
+
+    for i in first_or_last:
+        multi_layers_number.remove(i)
+
     # get inner walls of multimaterial layers
     multi_inner_walls = []
 
@@ -937,20 +946,6 @@ def adhesion_structure_horizontal(file_name):
                         set = l
                         outer_walls.append([layer, extruder, set])
 
-    #for i in outer_walls:
-    #    print(i)
-
-
-    '''
-    # get individual outer wall polygons
-    current_extruder = -1
-    polygons = []
-    current_polygon = []
-
-    for layer in multi_layers:
-        for i in outer_walls:
-            if i[1] !=
-    '''
 
     # plt.plot(x_values, y_values, 'ro')
     # plt.plot(a_x, a_y, 'bo')
@@ -959,28 +954,105 @@ def adhesion_structure_horizontal(file_name):
 
     outer_walls_df = pd.DataFrame(outer_walls, columns=['layer', 'extruder', 'commands'])
 
-    polygons_x_list = []
-    polygons_y_list = []
+    #polygons_x_list = []
+    #polygons_y_list = []
+    polygons_list = []
 
     for i in range(len(outer_walls)):
         commands = outer_walls[i][2].split("\n")
         extruder = outer_walls[i][1]
-        polygons_x, polygons_y = get_polygons_of_wall(commands)
-        polygons_x_list.append(polygons_x)
-        polygons_y_list.append(polygons_y)
+
+        polygons_list.append(get_polygons_of_wall(commands))
+
+        #polygons_x, polygons_y = get_polygons_of_wall(commands)
+        #polygons_x_list.append(polygons_x)
+        #polygons_y_list.append(polygons_y)
 
         #outer_walls_df.loc['polygon_x'][i] = polygons_x
         #outer_walls_df.iloc[i]['polygon_y'] = polygons_y
 
-    outer_walls_df['polygons_x'] = polygons_x_list
-    outer_walls_df['polygons_y'] = polygons_y_list
+    #outer_walls_df['polygons_x'] = polygons_x_list
+    #outer_walls_df['polygons_y'] = polygons_y_list
 
-    print(outer_walls_df)
+    outer_walls_df['polygons'] = polygons_list
 
-    #for i in multi_layers_number:
-     #   current_layer_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
-      #  print(current_layer_df)
+    #print(outer_walls_df['polygons'])
 
+    #print(outer_walls_df)
+
+    #for i in range(len(outer_walls_df)):
+    #    print(len(outer_walls_df.iloc[i]['polygons']))
+
+    dist = 0.4
+
+    for i in multi_layers_number:
+        current_layer_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
+
+        adjacency_set = []
+
+        # first material
+        polygons_0 = current_layer_df.iloc[0]['polygons']
+        # second material
+        polygons_1 = current_layer_df.iloc[1]['polygons']
+
+        pairs = []
+
+        # find material 0 - material 1 pairs
+        for j in range(len(polygons_0)):
+            for k in range(len(polygons_1)):
+                pairs.append([j, k])
+
+        print(pairs)
+
+        adjacency = []
+
+        for j in range(len(pairs)):
+            p_0 = polygons_0[pairs[j][0]]
+            p_1 = polygons_1[pairs[j][1]]
+
+            for k in range(len(p_0)):
+                for l in range(len(p_1)):
+                    if math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]) <= dist:
+                        print(math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]))
+                        if p_0[k] not in adjacency:
+                            adjacency.append(p_0[k])
+                        if p_1[l] not in adjacency:
+                            adjacency.append(p_1[l])
+
+            adjacency_set.append(adjacency)
+
+        print(polygons_0)
+        print(polygons_1)
+
+        print('adjacency')
+        for a in adjacency_set:
+            print(a)
+
+        '''
+        for j in range(len(polygons_0)):
+
+            adjacent_points = []
+
+            # distance between two points of the first and the second material
+            for k in range(len(polygons_0[j])):
+                p_0 = polygons_0[j][k]
+
+                for l in range(len(polygons_1)):
+                    for m in range(len(polygons_1[l])):
+                        p_1 = polygons_1[l][m]
+                        #print(p_1)
+
+                        if math.hypot(p_0[0] - p_1[0], p_0[1] - p_1[1]) <= dist:
+                            adjacent_points.append(p_0)
+                            adjacent_points.append(p_1)
+
+                        if len(adjacent_points) != 0:
+                            adjacency_set.append(adjacent_points)
+                        adjacent_points = []
+
+
+        print(adjacency_set)
+        '''
 
     #plt.plot(g1_x, g1_y, 'ro')
     #plt.plot(g0_x, g0_y, 'bo')
@@ -1011,15 +1083,27 @@ def get_polygons_of_wall(commands):
             for w in words:
                 if "X" in w:
                     flag = 0
-                    g1_x.append(w.split("X")[1])
+                    g1_x.append(float(w.split("X")[1]))
                 elif "Y" in w:
-                    g1_y.append(w.split("Y")[1])
+                    g1_y.append(float(w.split("Y")[1]))
         elif "G0" in c and flag == 0:  # next polygon
             flag = 1
             polygons_x.append(g1_x)
             polygons_y.append(g1_y)
 
-    return polygons_x, polygons_y
+    polygons = []
+    poly = []
+    #print(polygons_x)
+
+    for i in range(len(polygons_x)):
+
+        for j in range(len(polygons_x[i])):
+            poly.append([polygons_x[i][j], polygons_y[i][j]])
+
+        polygons.append(poly)
+    #print(polygons)
+    #return polygons_x, polygons_y
+    return polygons
 
 
 if __name__ == "__main__":
@@ -1028,8 +1112,8 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/sandal.gcode", [15, 24], "grid")
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
-    #adhesion_structure("./gcode/CE3_d2095_small.gcode", [125], "blob")
-    #adhesion_structure("./gcode/CE3_d2095_small.gcode", [125], "grid")
+    #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "blob")
+    #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "grid")
 
-    adhesion_structure_horizontal("./gcode_dual/FCPRO_cuboids.gcode")
+    adhesion_structure_horizontal("./gcode_dual/FCPRO_3_cuboids.gcode")
 

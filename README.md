@@ -1,2 +1,2 @@
 # Multi-ttach
-Multi-ttach: Adhesion Structure for FDM printing
+Multi-ttach: Adhesion Structure for Multimaterial FDM printing

@@ -366,10 +366,10 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     # b-structure
     b_structure = ""
 
-    filling = 0.3  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
+    filling = 0.9  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
     g0 = "G0 F9500 "
-    g1 = "G1 F50 "
+    g1 = "G1 F2000 "
 
     count = 0
 
@@ -1033,8 +1033,12 @@ def adhesion_structure_horizontal(file_name):
                         if p_1[l] not in adjacency:
                             adjacency.append(p_1[l])
 
-            adjacency_set.append(adjacency)
+            if len(adjacency) != 0:
+                adjacency_set.append(adjacency)
             adjacency = []
+
+
+        print(adjacency_set)
 
         stitches = ";TYPE:STITCH\n"
 
@@ -1383,7 +1387,8 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
     #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "blob")
-    #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "grid")
+    #adhesion_structure("./gcode/CE3_final.gcode", [127], "grid")
+    #adhesion_structure("./gcode/CE3_final.gcode", [127], "blob")
 
-    adhesion_structure_horizontal("./gcode_dual/FCPRO_3_cuboids.gcode")
+    adhesion_structure_horizontal("./gcode_dual/FCPRO_final.gcode")
 

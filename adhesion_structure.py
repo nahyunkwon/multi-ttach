@@ -369,7 +369,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     filling = 0.9  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
     g0 = "G0 F9500 "
-    g1 = "G1 F2000 "
+    g1 = "G1 F50 "
 
     count = 0
 
@@ -1060,7 +1060,7 @@ def adhesion_structure_horizontal(file_name):
             x_min, x_max = get_min_max(x_values)
             y_min, y_max = get_min_max(y_values)
 
-            fair_dist = 3
+            fair_dist = 0.4
 
             # direction = 0  # 0: horizontal, 1: vertical
 
@@ -1196,9 +1196,8 @@ def adhesion_structure_horizontal(file_name):
 
         stitches_per_layer.append([i, stitches])
         
-        '''
+        
 
-    '''
     p_x = []
     p_y = []
     for p in adjacency_set[0]:
@@ -1390,5 +1389,5 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_final.gcode", [127], "grid")
     #adhesion_structure("./gcode/CE3_final.gcode", [127], "blob")
 
-    adhesion_structure_horizontal("./gcode_dual/FCPRO_final.gcode")
+    adhesion_structure_horizontal("./gcode_dual/FCPRO_final_abs.gcode")
 

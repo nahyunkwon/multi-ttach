@@ -885,9 +885,11 @@ def adhesion_structure_horizontal(file_name):
             multi_layers_number.append(layer_df.iloc[i]['layer'])
 
     first_or_last = []
+    excluded_layers = [0, 1, 2, 3, 4,
+                       layer_count - 1, layer_count - 2, layer_count - 3, layer_count - 4, layer_count - 5]
 
     for i in range(len(multi_layers_number)):
-        if multi_layers_number[i] == 0 or multi_layers_number[i] == layer_count - 1:
+        if multi_layers_number[i] not in excluded_layers:
             first_or_last.append(i)
 
     for i in first_or_last:
@@ -1038,7 +1040,7 @@ def adhesion_structure_horizontal(file_name):
             adjacency = []
 
 
-        print(adjacency_set)
+        #print(adjacency_set)
 
         stitches = ";TYPE:STITCH\n"
 
@@ -1060,7 +1062,8 @@ def adhesion_structure_horizontal(file_name):
             x_min, x_max = get_min_max(x_values)
             y_min, y_max = get_min_max(y_values)
 
-            fair_dist = 0.4
+            fair_dist = 3
+            fair_dist_to_outer = 1.2
 
             # direction = 0  # 0: horizontal, 1: vertical
 
@@ -1072,12 +1075,12 @@ def adhesion_structure_horizontal(file_name):
             if direction == 0:  # horizontal alignment
                 x_min -= fair_dist
                 x_max += fair_dist
-                y_min += fair_dist
-                y_max -= fair_dist
+                y_min += fair_dist_to_outer
+                y_max -= fair_dist_to_outer
 
             elif direction == 1:  # vertical alignment
-                x_min += fair_dist
-                x_max -= fair_dist
+                x_min += fair_dist_to_outer
+                x_max -= fair_dist_to_outer
                 y_min -= fair_dist
                 y_max += fair_dist
 
@@ -1379,6 +1382,25 @@ def get_polygons_of_wall(commands):
     return polygons
 
 
+def calculate_extrusion_amount(filename):
+
+    gcode = open(filename, "r")
+
+    lines = gcode.readlines()
+
+    total_extrusion = 0
+
+    for l in lines:
+        if "G1" in l:
+            parts = l.split(" ")
+
+            for p in parts:
+                if "E" in p:
+                    total_extrusion += float(p.split("E")[1])
+
+    print(total_extrusion)
+
+
 if __name__ == "__main__":
 
     #adhesion_structure("./gcode/sandal.gcode", [15, 24], "blob")
@@ -1389,5 +1411,6 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_final.gcode", [127], "grid")
     #adhesion_structure("./gcode/CE3_final.gcode", [127], "blob")
 
-    adhesion_structure_horizontal("./gcode_dual/FCPRO_final_abs.gcode")
+    adhesion_structure_horizontal("./gcode_dual/FCPRO_final_long.gcode")
 
+    #calculate_extrusion_amount("./gcode/CE3_final_grid.gcode")

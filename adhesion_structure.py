@@ -1408,8 +1408,8 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
     #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "blob")
-    #adhesion_structure("./gcode/CE3_final.gcode", [127], "grid")
-    #adhesion_structure("./gcode/CE3_final.gcode", [127], "blob")
+    #adhesion_structure("./gcode/CE3_cylinder.gcode", [10], "grid")
+    #adhesion_structure("./gcode/CE3_cylinder.gcode", [10], "blob")
 
     adhesion_structure_horizontal("./gcode_dual/FCPRO_final_long.gcode")
 

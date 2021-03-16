@@ -642,33 +642,32 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                     or ";LAYER:" + str(target_layer - 1) + "\n" in l \
                     or ";LAYER:" + str(target_layer) + "\n" in l \
                     or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
-                #is_target = 1
-                layer = int(l.split(":")[1].strip())
+                is_target = 1
                 if ";LAYER:" + str(target_layer + 1) + "\n" in l:
                     is_b = 1
-                    #layer = 0
-                #if ";LAYER:" + str(target_layer) + "\n" in l:
-                #    layer = target_layer
+                    layer = 0
+                if ";LAYER:" + str(target_layer) + "\n" in l:
+                    layer = target_layer
             if is_target == 1 and ";TYPE:FILL" in l:
                 modified += l
                 is_infill = 1
             if is_target == 1 and ";TYPE:SKIN" in l:
                 modified += l
                 is_infill = 1
-            if is_target == 1 and ";MESH:" in l:
+            if is_target == 1 and ";MESH:NONMESH" in l:
                 is_mesh = 1
                 #mesh_each += l
 
             if is_mesh == 1 and is_target == 1:
                 mesh_each += l
 
-            if ";MESH:" in l and is_infill == 1 and layer in target_layers:
+            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
                 is_mesh = 0
-                #is_target = 0
+                is_target = 0
                 is_infill = 0
                 if is_b == 0:  # a structure
 
-                    modified += ";TYPE:A-STRUCTURE\n" + a_structure
+                    modified += a_structure
                     modified += mesh_each
                     #print(mesh_each)
                     mesh_each = ""
@@ -681,15 +680,14 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                         modified += "\n"
                         modified += mesh_f_replaced + "\n"
                 else:
-                    modified += ";TYPE:B-STRUCTURE\n" + b_structure
-                    modified += ";TYPE:FULL-IN-B-STRUCTURE\n" + full_structure
+                    modified += b_structure + full_structure
                     modified += mesh_each
                     mesh_each = ""
                     is_mesh = 0
                     is_b = 0
                 #modified += ";MESH:NONMESH\n"
-            #elif is_target == 1 and is_infill == 1:
-            #    pass
+            elif is_target == 1 and is_infill == 1:
+                pass
             else:
                 modified += l
 
@@ -713,7 +711,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
             if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
                 is_infill = 0
-                final += ";TYPE:FULL-INFILL\n" + full_structure
+                final += full_structure
             elif is_target == 1 and is_infill == 1:
                 pass
             else:
@@ -1415,7 +1413,7 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "blob")
     #adhesion_structure("./gcode/CE3_d2095_samesidehole.gcode", [190], "grid")
     #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "blob")
-    adhesion_structure("./gcode/CE3_final_5.gcode", [127], "grid")
+    adhesion_structure("./gcode/CE3_final.gcode", [127], "grid")
     #adhesion_structure("./gcode/CE3_final_abs_cpla.gcode", [127], "blob")
     #adhesion_structure("./example/CE3_gripper.gcode", [10], "blob")
     #adhesion_structure_horizontal("./gcode_dual/FCPRO_final_5.gcode")

@@ -30,7 +30,19 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_d2095_small_11.7.gcode", [125], "blob")
     #adhesion_structure("./gcode/CE3_final.gcode", [127], "grid")
     #adhesion_structure("./gcode/CE3_cylinder.gcode", [10], "grid")
-    adhesion_structure_vertical("./example/another_gripper.gcode", [7], "grid")
+    #adhesion_structure_vertical("./example/another_gripper.gcode", [7], "grid")
+    adhesion_structure_vertical("five_vertical/CE3_Final_Sample_1.gcode", [127], "grid")
+    adhesion_structure_vertical("five_vertical/CE3_Final_Sample_2.gcode", [127], "grid")
+    adhesion_structure_vertical("five_vertical/CE3_Final_Sample_3.gcode", [127], "grid")
+    adhesion_structure_vertical("five_vertical/CE3_Final_Sample_4.gcode", [127], "grid")
+    adhesion_structure_vertical("five_vertical/CE3_Final_Sample_5.gcode", [127], "grid")
+
+    #adhesion_structure_vertical("five_vertical/CE3_Final_Sample_1.gcode", [127], "blob")
+    #adhesion_structure_vertical("five_vertical/CE3_Final_Sample_2.gcode", [127], "blob")
+    #adhesion_structure_vertical("five_vertical/CE3_Final_Sample_3.gcode", [127], "blob")
+    #adhesion_structure_vertical("five_vertical/CE3_Final_Sample_4.gcode", [127], "blob")
+    #adhesion_structure_vertical("five_vertical/CE3_Final_Sample_5.gcode", [127], "blob")
+
     #adhesion_structure_horizontal("./gcode_dual/FCPRO_final_5_100.gcode")
 
     #calculate_extrusion_amount("./gcode/CE3_final_grid.gcode")

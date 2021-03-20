@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry.polygon import LinearRing, Polygon, Point
 from maxrect import get_intersection, get_maximal_rectangle, rect2poly
-from horizontal_adhesion import *
 
 
 def heating_top_layer(file_name, layer_no):
@@ -32,17 +31,17 @@ def heating_top_layer(file_name, layer_no):
     goback = ""
     goback2 = ""
 
-    # Get pausecode
+#Get pausecode
     for p in pauselines:
         pausecode += p
 
-    # Get total layer count
+#Get total layer count
     for i in range(len(lines)):
 
         if ";LAYER_COUNT:" in lines[i]:
             countline = lines[i].split(":")
             layer_count = int(countline[1])
-    # Get header part of code
+# Get header part of code
     for l in lines:
 
         if ";LAYER:" + str(int(layer_no)) + "\n" in l:
@@ -50,7 +49,7 @@ def heating_top_layer(file_name, layer_no):
         else:
             head += l
 
-    # Get layer to be repeated and remove the E commands
+#Get layer to be repeated and remove the E commands
     for i in range(len(lines)):
         if ";LAYER:"+str(int(layer_no)) + "\n" in lines[i]:
             flag = "yes"
@@ -86,7 +85,7 @@ def heating_top_layer(file_name, layer_no):
 
 
 
-    #Get rest of the code
+#Get rest of the code
     for i in range(len(lines)):
         if ";LAYER:"+str(int(layer_no)+1) in lines[i]:
             layer_flag = "yes"
@@ -297,8 +296,8 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             b_y.append(a_coords[i][1] + gap/2)
 
 
-    #plt.plot(x_values, y_values, linewidth=0.2)
-    #plt.plot(a_x, a_y, 'bo', markersize=0.1)
+    #plt.plot(x_values, y_values, 'ro')
+    #plt.plot(a_x, a_y, 'bo')
     #plt.plot(b_x, b_y, 'go')
     #plt.show()
 
@@ -367,7 +366,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     # b-structure
     b_structure = ""
 
-    filling = 0.9  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
+    filling = 0.3  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
     g0 = "G0 F9500 "
     g1 = "G1 F50 "
@@ -555,18 +554,11 @@ def generate_full_infill(a_x, a_y, gap=0.2):
     return a_structure
 
 
-def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
-    '''
-    replace infill of the target layer to adhesion structure
-    :param file_name: location of source gcode file
-    :param target_layer: target layer
-    :param type: type of adhesion structure
-    :return: null
-    '''
+def replace_infill_to_adhesion_structure(file_name, target_layer, type):
 
     gcode = open(file_name)
 
-    pause_code = open("./pause_code.txt").readlines()
+    pause_code = open("pause_code.txt").readlines()
 
     lines = gcode.readlines()
 
@@ -632,8 +624,6 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
     mesh_each = ""
     is_mesh = 0
 
-    target_layers = [target_layer - 2, target_layer -  1, target_layer, target_layer + 1]
-
     # grid structure
     if type == "grid":
         layer = 0
@@ -681,7 +671,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                         modified += "\n"
                         modified += mesh_f_replaced + "\n"
                 else:
-                    modified += b_structure + full_structure
+                    modified += b_structure
                     modified += mesh_each
                     mesh_each = ""
                     is_mesh = 0
@@ -706,25 +696,20 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                 final += l
                 is_infill = 1
             if is_target == 1 and ";TYPE:SKIN" in l:
-                final += l
+                modified += l
                 is_infill = 1
 
             if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
                 is_target = 0
                 is_infill = 0
                 final += full_structure
-                final += l
             elif is_target == 1 and is_infill == 1:
                 pass
             else:
                 final += l
 
-        if flag == 0:
-            with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
-                f.write(final)
-        elif flag == 1:
-            with open(file_name, "w") as f:
-                f.write(final)
+        with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
+            f.write(final)
 
     # blob structure
     elif type == "blob":
@@ -779,6 +764,8 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                 final += l
                 is_infill = 1
             if is_target == 1 and ";TYPE:SKIN" in l:
+
+                #modified += l
                 final += l
                 is_infill = 1
 
@@ -786,22 +773,16 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                 is_target = 0
                 is_infill = 0
                 final += full_structure
-                final += l
             elif is_target == 1 and is_infill == 1:
                 pass
             else:
                 final += l
 
-        if flag == 0:
-            with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
-                f.write(final)
-        elif flag == 1:
-            with open(file_name, "w") as f:
-                f.write(final)
+        with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
+            f.write(final)
 
 
 def unit_square_is_included(p, gap, coords):
-
     if [p[0] + gap, p[1]] not in coords:
         return False
     if [p[0], p[1] + gap] not in coords:
@@ -812,14 +793,84 @@ def unit_square_is_included(p, gap, coords):
     return True
 
 
-def adhesion_structure_vertical(file_name, target_layers, type):
+target_no = 0
+def find_target_layer(filename):
+    dualcode = open(filename)
+    lines = dualcode.readlines()
 
-    target_layers.sort()
+    in_layers = 0
+    right_tool = 0
+    left_tool = 0
+    tool_change = 0
 
-    # todo: handle layer number issue (what if the layer number is invalid??
 
-    replace_infill_to_adhesion_structure(file_name, target_layers[0], type, flag=0)
+    for l in lines:
+        if ";LAYER:0" in l:
+            in_layers = 1
+            print("layer 0")
 
-    if len(target_layers) > 1:
-        for i in range(1, len(target_layers)):
-            replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i], type, flag=1)
+        if "M135 T0" in l and left_tool == 0 and in_layers == 1:
+            tool_change = 0
+            right_tool = 1
+            print("right tool")
+
+        if "M135 T1" in l and right_tool == 0 and in_layers == 1:
+            tool_change = 0
+            left_tool = 1
+            print("left tool")
+
+        if "M135 T0" in l and left_tool == 1 and in_layers == 1:
+            tool_change = 1
+            right_tool = 1
+            left_tool = 0
+            print("tool-change right tool")
+        if "M135 T1" in l and right_tool == 1 and in_layers == 1:
+            tool_change = 1
+            left_tool = 1
+            right_tool = 0
+            print("tool-change left tool")
+
+
+
+        if tool_change == 1 and ";LAYER:" in l:
+            target_no = int(l.split(":")[1])
+            print(target_no)
+            tool_change = 0
+            target_no -= 2
+    return target_no
+
+
+
+
+
+if __name__ == "__main__":
+    t = find_target_layer("FCPRO_vertical.gcode")
+    print(t)
+    #file_name = "./cube.gcode"
+    #target_layer = 4
+
+    #replace_infill_to_adhesion_structure("./cuberelative.gcode", 8, "grid")
+    #replace_infill_to_adhesion_structure("./cylinder0.2.gcode", 6, "blob")
+
+    #replace_infill_to_adhesion_structure("./cube.gcode", 4, "blob")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "blob")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
+
+    #replace_infill_to_adhesion_structure("./cube.gcode", 4, "grid")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 6, "grid")
+
+    #get_grid_points_for_target_layer("./cube.gcode", 4, 0.4)
+    #get_grid_points_for_target_layer("./cylinder.gcode", 6, 2)
+    #get_grid_points_for_target_layer("./bunny.gcode", 13, 2)
+
+    #replace_infill_to_adhesion_structure("./bunny2.0.gcode", 13, "blob")
+    #eplace_infill_to_adhesion_structure("./cylinder.gcode", 7, "grid")
+    #replace_infill_to_adhesion_structure("./cylinder.gcode", 5, "blob")
+
+    #replace_infill_to_adhesion_structure("./cube.gcode", 10, "grid")
+    #replace_infill_to_adhesion_structure("./CE3_modified_d2095.gcode", 190, "blob")
+    #replace_infill_to_adhesion_structure("./gcode/sandal_blob.gcode", 28, "blob")
+    replace_infill_to_adhesion_structure("FCPRO_vertical.gcode", t, "blob")
+    replace_infill_to_adhesion_structure("FCPRO_vertical.gcode", t, "grid")
+    #replace_infill_to_adhesion_structure("./TPeel.gcode", 49, "blob")
+    #heating_top_layer("./cylinder.gcode", 5)

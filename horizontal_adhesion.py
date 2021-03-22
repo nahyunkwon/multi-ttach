@@ -185,6 +185,72 @@ def adhesion_structure_horizontal(file_name):
 
     dist = 0.4  # nozzle diameter, the maximum gap to find adjacent points
 
+    #----------------------------------------------
+    i = 10
+    current_outer_walls_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
+    current_inner_walls_df = inner_walls_df.loc[inner_walls_df['layer'] == i]
+
+    adjacency_set = []
+
+    # first material
+    polygons_0 = current_outer_walls_df.iloc[0]['polygons']
+    # second material
+    polygons_1 = current_outer_walls_df.iloc[1]['polygons']
+
+    # inner polygons
+    inner_polygon_0 = current_inner_walls_df.iloc[0]['polygons']
+    inner_polygon_1 = current_inner_walls_df.iloc[1]['polygons']
+
+    pairs = []
+
+    print(inner_polygon_0)
+    print(inner_polygon_1)
+    all_the_points = []
+
+    for poly in inner_polygon_0:
+        for point in poly:
+            all_the_points.append(point)
+    for poly in inner_polygon_1:
+        for point in poly:
+            all_the_points.append(point)
+
+    print(all_the_points)
+
+    inner_x = []
+    inner_y = []
+
+    #for point
+
+
+    # find material 0 - material 1 pairs
+    for j in range(len(polygons_0)):
+        for k in range(len(polygons_1)):
+            pairs.append([j, k])
+
+    # print(pairs)
+
+    adjacency = []
+
+    for j in range(len(pairs)):
+        p_0 = polygons_0[pairs[j][0]]
+        p_1 = polygons_1[pairs[j][1]]
+
+        for k in range(len(p_0)):
+            for l in range(len(p_1)):
+                if math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]) <= dist:
+                    # print(math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]))
+                    if p_0[k] not in adjacency:
+                        adjacency.append(p_0[k])
+                    if p_1[l] not in adjacency:
+                        adjacency.append(p_1[l])
+
+        if len(adjacency) != 0:
+            adjacency_set.append(adjacency)
+        adjacency = []
+
+    # print(adjacency_set)
+
+    '''
     for i in multi_layers_number:
 
         current_outer_walls_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
@@ -303,6 +369,8 @@ def adhesion_structure_horizontal(file_name):
 
     with open(file_name.split(".gcode")[0] + "_stitched.gcode", "w") as f:
         f.write(final)
+        
+    '''
 
 
 def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):

@@ -793,16 +793,15 @@ def unit_square_is_included(p, gap, coords):
     return True
 
 
-target_no = 0
 def find_target_layer(filename):
     dualcode = open(filename)
     lines = dualcode.readlines()
 
+    target_no = 0
     in_layers = 0
     right_tool = 0
     left_tool = 0
     tool_change = 0
-
 
     for l in lines:
         if ";LAYER:0" in l:
@@ -829,8 +828,6 @@ def find_target_layer(filename):
             left_tool = 1
             right_tool = 0
             print("tool-change left tool")
-
-
 
         if tool_change == 1 and ";LAYER:" in l:
             target_no = int(l.split(":")[1])

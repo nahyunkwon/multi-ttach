@@ -812,6 +812,50 @@ def unit_square_is_included(p, gap, coords):
     return True
 
 
+def find_target_layer(filename):
+    dualcode = open(filename)
+    lines = dualcode.readlines()
+
+    target_no = 0
+    in_layers = 0
+    right_tool = 0
+    left_tool = 0
+    tool_change = 0
+
+    for l in lines:
+        if ";LAYER:0" in l:
+            in_layers = 1
+            print("layer 0")
+
+        if "M135 T0" in l and left_tool == 0 and in_layers == 1:
+            tool_change = 0
+            right_tool = 1
+            print("right tool")
+
+        if "M135 T1" in l and right_tool == 0 and in_layers == 1:
+            tool_change = 0
+            left_tool = 1
+            print("left tool")
+
+        if "M135 T0" in l and left_tool == 1 and in_layers == 1:
+            tool_change = 1
+            right_tool = 1
+            left_tool = 0
+            print("tool-change right tool")
+        if "M135 T1" in l and right_tool == 1 and in_layers == 1:
+            tool_change = 1
+            left_tool = 1
+            right_tool = 0
+            print("tool-change left tool")
+
+        if tool_change == 1 and ";LAYER:" in l:
+            target_no = int(l.split(":")[1])
+            print(target_no)
+            tool_change = 0
+            target_no -= 2
+    return target_no
+
+
 def adhesion_structure_vertical(file_name, target_layers, type):
 
     target_layers.sort()
@@ -823,3 +867,9 @@ def adhesion_structure_vertical(file_name, target_layers, type):
     if len(target_layers) > 1:
         for i in range(1, len(target_layers)):
             replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i], type, flag=1)
+
+
+def adhesion_structure_vertical_dual(filename, type):
+    t = find_target_layer(filename)
+    replace_infill_to_adhesion_structure(filename, t, type)
+

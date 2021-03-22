@@ -19,13 +19,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
             <li class="nav-item active">
-                <a class="nav-link" href="{{ url_for('vertical')}}">vertical(single-extruder)</a>
-            </li>
-            <li class="nav-item active">
-            <a class="nav-link" href="{{ url_for('vertical')}}">vertical(dual-extruder)</a>
-            </li>
-            <li class="nav-item active">
-                <a class="nav-link" href="./horizontal.html">horizontal(dual-extruder)</a>
+                <a class="nav-link" href="{{ url_for('about')}}">About</a>
             </li>
             </ul>
         </div>
@@ -37,19 +31,40 @@
         {% block content %} {% endblock %}
 
         <hr>
-        <h5>1. Upload your gcode file and click 'submit'. </h5>
-        <form action = "uploader" method = "POST" enctype = "multipart/form-data">
+        <h5>1. Vertical adhesion structure (for single-extruder printer) </h5>
+        <form action = "uploader_1" method = "POST" enctype = "multipart/form-data">
          <input type = "file" name = "file" />
+            <br>
+            <p>
+            <p>Layer numbers <input type = "text" name = "layers" /> ex) 10, 20, 30</p>
+            <p>Materials <input type = "text" name = "materials" /> ex) PLA, TPU, PLA (sequentially) </p>
+            <p>Adhesion type <input type="radio" name="options" id="option1" value="blob"> Blob </input>
+                <input type="radio" name="options" id="option2" value="grid"> Grid </input></p>
+            </p>
          <input type = "submit"/>
         </form>
         <br>
-        <h5>2. Enter the layer numbers where the material will be changed </h5>
-        <form action="action_to_perform_after_submission" method = "POST">
-            <p>Layer numbers <input type = "text" name = "Field1_name" /> ex) 10, 20, 30</p>
-            <p>Materials <input type = "text" name = "Field2_name" /> ex) PLA, TPU, PLA (sequentially) </p>
-            <p>Adhesion type <input type = "text" name = "Field3_name" /></p>
-            <p><button> <a href="/generate-adhesion/">generate</a></button></p>
+        <hr>
+        <h5>2. Vertical adhesion structure (for dual-extruder printer) </h5>
+        <form action = "uploader_2" method = "POST" enctype = "multipart/form-data">
+         <input type = "file" name = "file" />
+            <br>
+            <p>
+            <p>Adhesion type <input type="radio" name="options" id="option3" value="blob"> Blob </input>
+                <input type="radio" name="options" id="option4" value="grid"> Grid </input></p>
+            </p>
+         <input type = "submit"/>
         </form>
+        <br>
+        <hr>
+        <h5>3. Horizontal stitching (for dual-extruder printer) </h5>
+        <form action = "uploader_3" method = "POST" enctype = "multipart/form-data">
+         <input type = "file" name = "file" />
+            <br><br>
+            <input type = "submit"/>
+        </form>
+        <br>
+        <hr>
     </div>
 
     <!-- Optional JavaScript -->

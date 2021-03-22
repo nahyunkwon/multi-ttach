@@ -94,13 +94,6 @@ def adhesion_structure_horizontal(file_name):
     excluded_layers = [0, 1, 2, 3, 4,
                        layer_count - 1, layer_count - 2, layer_count - 3, layer_count - 4, layer_count - 5]
 
-    '''
-    for i in range(len(multi_layers_number)):
-        if multi_layers_number[i] in excluded_layers:
-            pass
-        else:
-            first_or_last.append(i)
-    '''
     for i in excluded_layers:
         multi_layers_number.remove(i)
 
@@ -187,15 +180,6 @@ def adhesion_structure_horizontal(file_name):
         polygons_list.append(get_polygons_of_wall(commands))
 
     inner_walls_df['polygons'] = polygons_list
-
-    # print(inner_walls_df)
-
-    # print(outer_walls_df['polygons'])
-
-    # print(outer_walls_df)
-
-    # for i in range(len(outer_walls_df)):
-    #    print(len(outer_walls_df.iloc[i]['polygons']))
 
     stitches_per_layer = []
 
@@ -319,136 +303,6 @@ def adhesion_structure_horizontal(file_name):
 
     with open(file_name.split(".gcode")[0] + "_stitched.gcode", "w") as f:
         f.write(final)
-
-    # print(multi_layers_number)
-    '''
-
-    for i in multi_layers_number:
-        current_outer_walls_df = outer_walls_df.loc[outer_walls_df['layer'] == i]
-        current_inner_walls_df = inner_walls_df.loc[inner_walls_df['layer'] == i]
-
-        adjacency_set = []
-
-        # first material
-        polygons_0 = current_outer_walls_df.iloc[0]['polygons']
-        # second material
-        polygons_1 = current_outer_walls_df.iloc[1]['polygons']
-
-        # inner polygons
-        inner_polygon_0 = current_inner_walls_df.iloc[0]['polygons']
-        inner_polygon_1 = current_inner_walls_df.iloc[1]['polygons']
-
-        pairs = []
-
-        # find material 0 - material 1 pairs
-        for j in range(len(polygons_0)):
-            for k in range(len(polygons_1)):
-                pairs.append([j, k])
-
-        #print(pairs)
-
-        adjacency = []
-
-        for j in range(len(pairs)):
-            p_0 = polygons_0[pairs[j][0]]
-            p_1 = polygons_1[pairs[j][1]]
-
-            for k in range(len(p_0)):
-                for l in range(len(p_1)):
-                    if math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]) <= dist:
-                        #print(math.hypot(p_0[k][0] - p_1[l][0], p_0[k][1] - p_1[l][1]))
-                        if p_0[k] not in adjacency:
-                            adjacency.append(p_0[k])
-                        if p_1[l] not in adjacency:
-                            adjacency.append(p_1[l])
-
-            adjacency_set.append(adjacency)
-
-        stitches = []
-
-        print(adjacency_set)
-
-        for j in range(len(adjacency_set)):
-            adj_points = adjacency_set[j]
-
-            x_min = 0
-            y_min = 0
-            x_max = 0
-            y_max = 0
-
-            for k in range(len(adj_points)):
-                if adj_points[k][0] < x_min:
-                    x_min = adj_points[k][0]
-                elif adj_points[k][0] > x_max:
-                    x_max = adj_points[k][0]
-
-                if adj_points[k][1] < y_min:
-                    y_min = adj_points[k][1]
-                elif adj_points[k][1] > y_max:
-                    y_max = adj_points[k][1]
-
-            fair_dist = 5
-
-            x_min -= fair_dist
-            y_min -= fair_dist
-            x_max += fair_dist
-            y_max += fair_dist
-
-
-
-
-
-
-        #for j in range(len(pairs)):
-            #inner_p_0 = inner_polygon_0[pairs[j][0]]
-            #inner_p_1 = inner_polygon_1[pairs[j][1]]
-            #adj_points =
-
-        stitches_per_layer.append([i, stitches])
-
-
-
-    p_x = []
-    p_y = []
-    for p in adjacency_set[0]:
-        p_x.append(p[0])
-        p_y.append(p[1])
-
-    #print(len(polygons_0[0]))
-   #print(len(polygons_1[0]))
-
-    p_0_x = []
-    p_0_y = []
-    p_1_x = []
-    p_1_y = []
-    p_2_x = []
-    p_2_y = []
-
-    for p in polygons_0[0]:
-        p_0_x.append(p[0])
-        p_0_y.append(p[1])
-    for p in polygons_0[1]:
-        p_1_x.append(p[0])
-        p_1_y.append(p[1])
-    for p in polygons_1[0]:
-        p_2_x.append(p[0])
-        p_2_y.append(p[1])
-
-    plt.plot(p_0_x, p_0_y, 'bo')
-    plt.plot(p_1_x, p_1_y, 'bo')
-    plt.plot(p_2_x, p_2_y, 'yo')
-    plt.plot(stitches[0][0], stitches[0][1], 'mo')
-    plt.plot(stitches[1][0], stitches[1][1], 'ko')
-    plt.plot(p_x, p_y, 'ro')
-    plt.show()
-
-    '''
-
-
-# def get_adjacent_points_set(polygons):
-
-#   for i in range(len(polygons)):
-#      polygons
 
 
 def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):

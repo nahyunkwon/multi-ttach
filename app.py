@@ -36,10 +36,8 @@ def upload_file():
         f.save("./user_files/" + secure_filename(f.filename))
 
         layers = request.form['layers']
-        materials = request.form['materials']
+        temps = request.form['temperatures']
         type = request.form['options']
-
-        print(layers, materials, type)
 
         layers_list = layers.split(",")
         
@@ -47,7 +45,12 @@ def upload_file():
         for i in range(len(layers_list)):
             layers_input.append(int(layers_list[i].strip()))
 
-        adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type)
+        temps_list = temps.split(",")
+        temps_input = []
+        for i in range(len(temps)):
+            temps_input.append(temps_list[i].strip())
+
+        adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type, temps_input)
 
         output_file = f.filename.split(".gcode")[0]+"_"+type+".gcode"
         time.sleep(5)

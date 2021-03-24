@@ -142,7 +142,9 @@ def get_largest_polygon(x_values, y_values):
                 all_polygons.append(polygon_coords)
                 polygon_coords = []
         else:
-            polygon_coords.append([x_values[i], y_values[i]])
+            coord = [x_values[i], y_values[i]]
+            if len(coord) != 0:
+                polygon_coords.append(coord)
 
     max_area = areas[0]
     max_index = 0
@@ -154,7 +156,12 @@ def get_largest_polygon(x_values, y_values):
             max_area = areas[i]
             max_index = i
 
-    return all_polygons[max_index]
+    all_polygons_final = []
+    for i in range(len(all_polygons)):
+       if len(all_polygons[i]) != 0:
+            all_polygons_final.append(all_polygons[i])
+    #print(len(all_polygons_final))
+    return all_polygons_final
 
 
 def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
@@ -194,11 +201,13 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     target_lines = ""
 
     for l in lines:
-        if is_target == 1 and is_inner_wall == 1 and ";TYPE:WALL-OUTER" in l:
-            break
+        if is_target == 1 and is_inner_wall == 1 and ";TYPE:" in l:
+            is_inner_wall = 0
         if ";LAYER:" + str(target_layer)+"\n" in l:  # target layer
             is_target = 1
             target_lines += l
+        if ";LAYER:" + str(target_layer+1)+"\n" in l:  # next layer
+            break
         if is_target == 1 and ";TYPE:WALL-INNER" in l:
             is_inner_wall = 1
         if is_target == 1 and is_inner_wall == 1:
@@ -206,6 +215,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
     x_values = []
     y_values = []
+    #print(target_lines)
 
     for l in target_lines.split("\n"):
         if "G1" in l:
@@ -222,87 +232,114 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             x_values.append("G0")
             y_values.append("G0")
 
+    # all polygons
     polygon_coords = get_largest_polygon(x_values, y_values)
 
-    polygon_coords.append(polygon_coords[0])
+    set_a_x = []
+    set_a_y = []
+    set_b_x = []
+    set_b_y = []
 
-    #print(polygon_coords)
+    for polygon in polygon_coords:
+        polygon.append(polygon[0])
 
-    x_values = []
-    y_values = []
+        # print(polygon_coords)
 
-    for i in range(len(polygon_coords)):
-        x_values.append(polygon_coords[i][0])
-        y_values.append(polygon_coords[i][1])
+        x_values = []
+        y_values = []
 
-    #print(polygon.area)
+        for i in range(len(polygon)):
+            x_values.append(polygon[i][0])
+            y_values.append(polygon[i][1])
 
-    x_min, x_max = get_min_max(x_values)
-    y_min, y_max = get_min_max(y_values)
+        # print(polygon.area)
 
-    grid_x = []
-    grid_y = []
+        x_min, x_max = get_min_max(x_values)
+        y_min, y_max = get_min_max(y_values)
 
-    current_x = x_min + gap / 2.2
-    current_y = y_min + gap / 2.2
-    #print(x_min)
-    #print(y_min)
+        grid_x = []
+        grid_y = []
 
-    grid_x.append(current_x)
-    grid_y.append(current_y)
+        current_x = x_min + gap / 2.2
+        current_y = y_min + gap / 2.2
+        # print(x_min)
+        # print(y_min)
 
-    while current_x <= x_max:
-        current_x += gap
         grid_x.append(current_x)
-    while current_y <= y_max:
-        current_y += gap
         grid_y.append(current_y)
 
-    #print(grid_x)
-    #print(grid_y)
+        while current_x <= x_max:
+            current_x += gap
+            grid_x.append(current_x)
+        while current_y <= y_max:
+            current_y += gap
+            grid_y.append(current_y)
 
-    # a structure
-    a_x = []
-    a_y = []
+        # print(grid_x)
+        # print(grid_y)
 
-    polygon = Polygon(polygon_coords)
+        # a structure
+        a_x = []
+        a_y = []
 
-    for i in range(len(grid_x)):
-        for j in range(len(grid_y)):
-            current_point = Point(grid_x[i], grid_y[j])
+        polygon = Polygon(polygon)
 
-            if polygon.contains(current_point):
+        for i in range(len(grid_x)):
+            for j in range(len(grid_y)):
+                current_point = Point(grid_x[i], grid_y[j])
 
-                if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
-                    a_x.append(current_point.x)
-                    a_y.append(current_point.y)
+                if polygon.contains(current_point):
 
-    a_coords = []  # coordinates of a structure
+                    if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
+                        a_x.append(current_point.x)
+                        a_y.append(current_point.y)
 
-    for i in range(len(a_x)):
-        a_coords.append([a_x[i], a_y[i]])
+        a_coords = []  # coordinates of a structure
 
-    #print(a_coords)
+        for i in range(len(a_x)):
+            a_coords.append([a_x[i], a_y[i]])
 
-    #print(sorted(a_coords, key=lambda x: x[1]))
+        # print(a_coords)
 
-    # x and y values for b structure
-    b_x = []
-    b_y = []
+        # print(sorted(a_coords, key=lambda x: x[1]))
 
-    # check if the unit square is included in the polygon
-    for i in range(len(a_coords)):
-        if unit_square_is_included(a_coords[i], gap, a_coords):
-            b_x.append(a_coords[i][0] + gap/2)
-            b_y.append(a_coords[i][1] + gap/2)
+        # x and y values for b structure
+        b_x = []
+        b_y = []
+
+        # check if the unit square is included in the polygon
+        for i in range(len(a_coords)):
+            if unit_square_is_included(a_coords[i], gap, a_coords):
+                b_x.append(a_coords[i][0] + gap / 2)
+                b_y.append(a_coords[i][1] + gap / 2)
+
+        # plt.plot(x_values, y_values, linewidth=0.2)
+        # plt.plot(a_x, a_y, 'bo', markersize=0.1)
+        # plt.plot(b_x, b_y, 'go')
+        # plt.show()
+
+        set_a_x.append(a_x)
+        set_a_y.append(a_y)
+        set_b_x.append(b_x)
+        set_b_y.append(b_y)
+
+        #return a_x, a_y, b_x, b_y
+
+    #print(len(set_a_x), len(set_a_y), len(set_b_x), len(set_b_y))
 
 
-    #plt.plot(x_values, y_values, linewidth=0.2)
-    #plt.plot(a_x, a_y, 'bo', markersize=0.1)
-    #plt.plot(b_x, b_y, 'go')
+    #plt.plot(set_a_x, set_a_y, 'bo', markersize=0.1)
+    #plt.plot(set_b_x, set_b_y, 'go')
     #plt.show()
 
-    return a_x, a_y, b_x, b_y
+    #for i in range(len(set_a_x)):
+    #    plt.plot(set_a_x[i], set_a_y[i], 'bo')
+    #for i in range(len(set_b_x)):
+    #    plt.plot(set_b_x[i], set_b_y[i], 'ro')
+
+    #plt.show()
+
+    return set_a_x, set_a_y, set_b_x, set_b_y
 
 
 def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
@@ -323,7 +360,10 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
 
-    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    try:
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    except IndexError:
+        return "", ""
 
     a_final = get_zig_zag_for_lines(a_x, a_y)
 
@@ -555,7 +595,7 @@ def generate_full_infill(a_x, a_y, gap=0.2):
     return a_structure
 
 
-def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
+def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, flag):
     '''
     replace infill of the target layer to adhesion structure
     :param file_name: location of source gcode file
@@ -566,7 +606,279 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
 
     gcode = open(file_name)
 
-    pause_code = open("./pause_code.txt").readlines()
+    pause_code_lines = open("./pause_code.txt").readlines()
+
+    pause_code = ""
+
+    for p in pause_code_lines:
+        pause_code += p
+        if ";temp change" in p and str(temp) != "-1":
+            pause_code += "\nM104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
+
+    lines = gcode.readlines()
+
+    a_structure = ""
+    b_structure = ""
+    full_structure = ""
+
+    gap = 2  # gap for a and b structure
+    set_a_x, set_a_y, set_b_x, set_b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
+    set_f_x, set_f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.6)
+
+    a_structure = ""
+    b_structure = ""
+    full_structure = ""
+
+    for i in range(len(set_a_x)):
+        a_x = set_a_x[i]
+        a_y = set_a_y[i]
+        b_x = set_b_x[i]
+        b_y = set_b_y[i]
+        if type == "grid":
+            single_a_structure, single_b_structure = generate_grid_infill(a_x, a_y, b_x, b_y, gap)
+        if type == "blob":
+            single_a_structure, single_b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
+        a_structure += single_a_structure
+        b_structure += single_b_structure
+    for i in range(len(set_f_x)):
+        f_x = set_f_x[i]
+        f_y = set_f_y[i]
+        single_full_structure = generate_full_infill(f_x, f_y)
+        full_structure += single_full_structure
+
+    is_target = 0
+    is_mesh = 0
+
+    mesh = ""
+
+    pop_list = []
+    index = 0
+    # get mesh code of the target layer
+    for l in lines:
+        if ";LAYER:" + str(target_layer) + "\n" in l:
+            is_target = 1
+        if ";MESH:NONMESH" in l and is_target == 1:
+            is_mesh = 1
+
+        if is_target == 1 and is_mesh == 1:
+            if ";TIME_ELAPSED:" in l:
+                break
+            mesh += l
+            pop_list.append(index)
+
+        index += 1
+
+    lines_a = lines
+    lines = []
+    for i in range(len(lines_a)):
+        if i not in pop_list:
+            lines.append(lines_a[i])
+
+    mesh_f_replaced = ""
+
+    for m in mesh.split("\n"):
+        if "F300" in m:
+            m = m.replace("F300", "F9500")
+        if "Z" in m and type == "blob":
+            z = m.split("Z")[1]
+            new_z = float(z) - 0.2
+            m = m.replace("Z" + str(z), "Z" + str(round(new_z, 2)))
+        mesh_f_replaced += m + "\n"
+
+    is_target = 0
+    is_infill = 0
+
+    modified = ""
+
+    is_b = 0
+
+    mesh_each = ""
+    is_mesh = 0
+    start = 0
+
+    final = ""
+
+    # grid structure
+    if type == "grid":
+        # target layers that need to remove infill commands
+        target_layers = [target_layer - 3, target_layer - 2, target_layer - 1, target_layer, target_layer + 1, target_layer + 2]
+        a_structure_layers = [target_layer - 2, target_layer - 1, target_layer]
+        layer = 0
+
+        for l in lines:
+            if ";LAYER:" in l:
+                layer = int(l.split(":")[1].strip())
+                is_infill = 0
+            if layer in target_layers:
+                is_target = 1
+            else:
+                is_target = 0
+
+            #if layer == target_layer + 1:  # b-structure
+            #    is_b = 1
+
+            if is_target == 1:
+                if ";TYPE:FILL" in l or ";TYPE:SKIN" in l:
+                    #if infill_start == 0:
+                    is_infill = 1
+                        #infill_start = 1  # start of infill
+
+            if is_infill == 1 and ";" in l:
+                if ";TYPE:FILL" in l or ";TYPE:SKIN" in l:
+                    pass
+                else:
+                    is_infill = 0
+
+            if is_infill == 1:
+                pass
+            elif ";LAYER:" + str(target_layer + 1) + "\n" in l:  # b-structure
+                final += mesh
+                final += "\n;PAUSE-CODE\n" + pause_code + "\n"
+                final += mesh_f_replaced
+                final += l
+                final += ";TYPE:GRID-B-STRUCTURE\n" + b_structure
+                final += ";TYPE:GRID-FULL-IN-B-STRUCTURE\n" + full_structure  # full infill for b-structure
+            elif layer in a_structure_layers and ";LAYER:" in l:  # a-structure
+                final += l
+                final += ";TYPE:GRID-A-STRUCTURE\n" + a_structure
+            elif ";LAYER:" + str(target_layer - 3) + "\n" in l or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # full infill
+                final += l
+                final += ";TYPE:FULL-STRUCTURE\n" + full_structure
+            else:
+                final += l
+
+        if flag == 0:  # only one interface
+            with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
+                f.write(final)
+        elif flag == 1:  # multiple interfaces
+            with open(file_name, "w") as f:
+                f.write(final)
+
+    # blob structure
+    elif type == "blob":
+        target_layers = [target_layer - 1, target_layer, target_layer + 1,
+                         target_layer + 2]
+        a_structure_layers = [target_layer]
+        layer = 0
+
+        for l in lines:
+            if ";LAYER:" in l:
+                layer = int(l.split(":")[1].strip())
+                is_infill = 0
+            if layer in target_layers:
+                is_target = 1
+            else:
+                is_target = 0
+
+            # if layer == target_layer + 1:  # b-structure
+            #    is_b = 1
+
+            if is_target == 1:
+                if ";TYPE:FILL" in l or ";TYPE:SKIN" in l:
+                    # if infill_start == 0:
+                    is_infill = 1
+                    # infill_start = 1  # start of infill
+
+            if is_infill == 1 and ";" in l:
+                if ";TYPE:FILL" in l or ";TYPE:SKIN" in l:
+                    pass
+                else:
+                    is_infill = 0
+
+            if is_infill == 1:
+                pass
+            elif ";LAYER:" + str(target_layer + 1) + "\n" in l:  # b-structure
+                final += mesh
+                final += "\n;PAUSE-CODE\n" + pause_code + "\n"
+                final += mesh_f_replaced
+                final += l
+                final += ";TYPE:GRID-B-STRUCTURE\n" + b_structure
+            elif layer in a_structure_layers and ";LAYER:" in l:  # a-structure
+                final += l
+                final += ";TYPE:GRID-A-STRUCTURE\n" + a_structure
+            elif ";LAYER:" + str(target_layer - 1) + "\n" in l or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # full infill
+                final += l
+                final += ";TYPE:FULL-STRUCTURE\n" + full_structure
+            else:
+                final += l
+
+        if flag == 0:
+            with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
+                f.write(final)
+        elif flag == 1:
+            with open(file_name, "w") as f:
+                f.write(final)
+
+
+def unit_square_is_included(p, gap, coords):
+
+    if [p[0] + gap, p[1]] not in coords:
+        return False
+    if [p[0], p[1] + gap] not in coords:
+        return False
+    if [p[0] + gap, p[1] + gap] not in coords:
+        return False
+
+    return True
+
+
+def find_target_layer(filename):
+    target_l = []
+    dualcode = open(filename)
+    lines = dualcode.readlines()
+    in_layers = 0
+    right_tool = 0
+    left_tool = 0
+    tool_change = 0
+    for l in lines:
+        if "M135 T0" in l and in_layers == 0:
+            right_tool = 1
+            left_tool = 0
+        if "M135 T1" in l and in_layers ==0:
+            right_tool = 0
+            left_tool = 1
+        if ";LAYER:0" in l:
+            in_layers = 1
+            print("layer 0")
+        if "M135 T0" in l and left_tool == 0 and in_layers == 1:
+            tool_change = 0
+            right_tool = 1
+            print("right tool")
+        if "M135 T1" in l and right_tool == 0 and in_layers == 1:
+            tool_change = 0
+            left_tool = 1
+            print("left tool")
+        if "M135 T0" in l and left_tool == 1 and in_layers == 1:
+            tool_change = 1
+            right_tool = 1
+            left_tool = 0
+            print("tool-change right tool")
+        if "M135 T1" in l and right_tool == 1 and in_layers == 1:
+            tool_change = 1
+            left_tool = 1
+            right_tool = 0
+            print("tool-change left tool")
+        if tool_change == 1 and ";LAYER:" in l:
+            target_no = int(l.split(":")[1])
+            print(target_no)
+            tool_change = 0
+            target_no -= 2
+            target_l.append(target_no)
+    return target_l
+
+
+def replace_infill_to_adhesion_structure_for_dual_extruder(file_name, target_layer, type, flag):
+    '''
+    replace infill of the target layer to adhesion structure
+    :param file_name: location of source gcode file
+    :param target_layer: target layer
+    :param type: type of adhesion structure
+    :return: null
+    '''
+
+    gcode = open(file_name)
+
+    pause_code = open("./empty_pause_code.txt").readlines()
 
     lines = gcode.readlines()
 
@@ -632,7 +944,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
     mesh_each = ""
     is_mesh = 0
 
-    target_layers = [target_layer - 2, target_layer -  1, target_layer, target_layer + 1]
+    target_layers = [target_layer - 2, target_layer - 1, target_layer, target_layer + 1]
 
     # grid structure
     if type == "grid":
@@ -800,72 +1112,15 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, flag):
                 f.write(final)
 
 
-def unit_square_is_included(p, gap, coords):
-
-    if [p[0] + gap, p[1]] not in coords:
-        return False
-    if [p[0], p[1] + gap] not in coords:
-        return False
-    if [p[0] + gap, p[1] + gap] not in coords:
-        return False
-
-    return True
-
-
-def find_target_layer(filename):
-    target_l = []
-    dualcode = open(filename)
-    lines = dualcode.readlines()
-    in_layers = 0
-    right_tool = 0
-    left_tool = 0
-    tool_change = 0
-    for l in lines:
-        if "M135 T0" in l and in_layers == 0:
-            right_tool = 1
-            left_tool = 0
-        if "M135 T1" in l and in_layers ==0:
-            right_tool = 0
-            left_tool = 1
-        if ";LAYER:0" in l:
-            in_layers = 1
-            print("layer 0")
-        if "M135 T0" in l and left_tool == 0 and in_layers == 1:
-            tool_change = 0
-            right_tool = 1
-            print("right tool")
-        if "M135 T1" in l and right_tool == 0 and in_layers == 1:
-            tool_change = 0
-            left_tool = 1
-            print("left tool")
-        if "M135 T0" in l and left_tool == 1 and in_layers == 1:
-            tool_change = 1
-            right_tool = 1
-            left_tool = 0
-            print("tool-change right tool")
-        if "M135 T1" in l and right_tool == 1 and in_layers == 1:
-            tool_change = 1
-            left_tool = 1
-            right_tool = 0
-            print("tool-change left tool")
-        if tool_change == 1 and ";LAYER:" in l:
-            target_no = int(l.split(":")[1])
-            print(target_no)
-            tool_change = 0
-            target_no -= 2
-            target_l.append(target_no)
-    return target_l
-
-
-def adhesion_structure_vertical(file_name, target_layers, type):
+def adhesion_structure_vertical(file_name, target_layers, type, temps):
 
     target_layers.sort()
 
     # todo: handle layer number issue (what if the layer number is invalid??
+    if len(target_layers) == 1:
+        replace_infill_to_adhesion_structure(file_name, target_layers[0], type, temps[1], flag=0)
 
-    replace_infill_to_adhesion_structure(file_name, target_layers[0], type, flag=0)
-
-    if len(target_layers) > 1:
+    if len(target_layers) > 2:
         for i in range(1, len(target_layers)):
             replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i], type, flag=1)
 
@@ -874,11 +1129,16 @@ def adhesion_structure_vertical_dual(filename, type):
     target_layers = find_target_layer(filename)
     #replace_infill_to_adhesion_structure(filename, t, type)
 
-    replace_infill_to_adhesion_structure(filename, target_layers[0], type, flag=0)
+    replace_infill_to_adhesion_structure_for_dual_extruder(filename, target_layers[0], type, flag=0)
 
     if len(target_layers) > 1:
         for i in range(1, len(target_layers)):
-            replace_infill_to_adhesion_structure(filename.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i],
+            replace_infill_to_adhesion_structure_for_dual_extruder(filename.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i],
                                                  type, flag=1)
 
 
+if __name__ == "__main__":
+    replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "blob", 230, flag=0)
+    replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "grid", 230, flag=0)
+    #replace_infill_to_adhesion_structure("./example/CE3_gripper.gcode", 15, "grid", flag=0)
+    #get_grid_points_for_target_layer("./gcode/CE3_cylinder.gcode", 15, gap=2)

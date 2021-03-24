@@ -595,7 +595,7 @@ def generate_full_infill(a_x, a_y, gap=0.2):
     return a_structure
 
 
-def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, flag):
+def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no_extruder, flag):
     '''
     replace infill of the target layer to adhesion structure
     :param file_name: location of source gcode file
@@ -606,20 +606,20 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, fl
 
     gcode = open(file_name)
 
-    pause_code_lines = open("./pause_code.txt").readlines()
+    if no_extruder == 1:  # single extruder
+        pause_code_lines = open("./pause_code.txt").readlines()
 
-    pause_code = ""
+        pause_code = ""
 
-    for p in pause_code_lines:
-        pause_code += p
-        if ";temp change" in p and str(temp) != "-1":
-            pause_code += "\nM104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
+        for p in pause_code_lines:
+            pause_code += p
+            if ";temp change" in p and str(temp) != "-1":
+                pause_code += "\nM104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
+
+    elif no_extruder == 2:  # dual extruder
+        pause_code = ""
 
     lines = gcode.readlines()
-
-    a_structure = ""
-    b_structure = ""
-    full_structure = ""
 
     gap = 2  # gap for a and b structure
     set_a_x, set_a_y, set_b_x, set_b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
@@ -822,7 +822,7 @@ def unit_square_is_included(p, gap, coords):
     return True
 
 
-def find_target_layer(filename):
+def find_target_layers_for_dual_extruder(filename):
     target_l = []
     dualcode = open(filename)
     lines = dualcode.readlines()
@@ -867,274 +867,28 @@ def find_target_layer(filename):
     return target_l
 
 
-def replace_infill_to_adhesion_structure_for_dual_extruder(file_name, target_layer, type, flag):
-    '''
-    replace infill of the target layer to adhesion structure
-    :param file_name: location of source gcode file
-    :param target_layer: target layer
-    :param type: type of adhesion structure
-    :return: null
-    '''
+def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder):
+    """
+    Generate adhesion structure for vertical adhesion
+    :param file_name: source gcode file
+    :param adhesion_type: "blob" or "grid"
+    :param materials: material list in sequential order
+    :param target_layers: interface layer numbers (the first element is always 0)
+    :param temps: temperature list in sequential order
+    :param no_extruder: the number of extruder. single(1) or dual(2)
+    :return: none
+    """
 
-    gcode = open(file_name)
+    #target_layers.sort()
+    target_layers = target_layers[1:]  # remove layer:0
 
-    pause_code = open("./empty_pause_code.txt").readlines()
+    if len(target_layers) == 1:  # only on interface
+        replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temps[1], no_extruder, flag=0)
 
-    lines = gcode.readlines()
-
-    if type == "grid":
-        gap = 2
-        a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
-        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.6)
-        a_structure, b_structure = generate_grid_infill(a_x, a_y, b_x, b_y, gap)
-        full_structure = generate_full_infill(f_x, f_y)
-    elif type == "blob":
-        gap = 2
-        a_x, a_y, b_x, b_y = get_grid_points_for_target_layer(file_name, target_layer, gap)
-        f_x, f_y, unused1, unused1 = get_grid_points_for_target_layer(file_name, target_layer, gap=0.6)
-        a_structure, b_structure = generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer)
-        full_structure = generate_full_infill(f_x, f_y)
-
-    is_target = 0
-    is_mesh = 0
-
-    mesh = ""
-
-    pop_list = []
-    index = 0
-    # get mesh code of the target layer
-    for l in lines:
-        if ";LAYER:" + str(target_layer) + "\n" in l:
-            is_target = 1
-        if ";MESH:NONMESH" in l and is_target == 1:
-            is_mesh = 1
-
-        if is_target == 1 and is_mesh == 1:
-            if ";TIME_ELAPSED:" in l:
-                break
-            mesh += l
-            pop_list.append(index)
-
-        index += 1
-
-    lines_a = lines
-    lines = []
-    for i in range(len(lines_a)):
-        if i not in pop_list:
-            lines.append(lines_a[i])
-
-    mesh_f_replaced = ""
-
-    for m in mesh.split("\n"):
-        if "F300" in m:
-            m = m.replace("F300", "F9500")
-        if "Z" in m and type == "blob":
-            z = m.split("Z")[1]
-            new_z = float(z) - 0.2
-            m = m.replace("Z"+str(z), "Z"+str(round(new_z, 2)))
-        mesh_f_replaced += m + "\n"
-
-    is_target = 0
-    is_infill = 0
-
-    modified = ""
-
-    is_b = 0
-
-    mesh_each = ""
-    is_mesh = 0
-
-    target_layers = [target_layer - 2, target_layer - 1, target_layer, target_layer + 1]
-
-    # grid structure
-    if type == "grid":
-        layer = 0
-        for l in lines:
-            # generate grid structure for 4 layers including target layer
-            if ";LAYER:" + str(target_layer - 2) + "\n" in l \
-                    or ";LAYER:" + str(target_layer - 1) + "\n" in l \
-                    or ";LAYER:" + str(target_layer) + "\n" in l \
-                    or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
-                is_target = 1
-                if ";LAYER:" + str(target_layer + 1) + "\n" in l:
-                    is_b = 1
-                    layer = 0
-                if ";LAYER:" + str(target_layer) + "\n" in l:
-                    layer = target_layer
-            if is_target == 1 and ";TYPE:FILL" in l:
-                modified += l
-                is_infill = 1
-            if is_target == 1 and ";TYPE:SKIN" in l:
-                modified += l
-                is_infill = 1
-            if is_target == 1 and ";MESH:NONMESH" in l:
-                is_mesh = 1
-                #mesh_each += l
-
-            if is_mesh == 1 and is_target == 1:
-                mesh_each += l
-
-            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
-                is_mesh = 0
-                is_target = 0
-                is_infill = 0
-                if is_b == 0:  # a structure
-
-                    modified += a_structure
-                    modified += mesh_each
-                    #print(mesh_each)
-                    mesh_each = ""
-                    if layer == target_layer:
-                        modified += "\n"
-                        modified += mesh + "\n"
-                        modified += "\n"
-                        for p in pause_code:
-                            modified += p
-                        modified += "\n"
-                        modified += mesh_f_replaced + "\n"
-                else:
-                    modified += b_structure + full_structure
-                    modified += mesh_each
-                    mesh_each = ""
-                    is_mesh = 0
-                    is_b = 0
-                #modified += ";MESH:NONMESH\n"
-            elif is_target == 1 and is_infill == 1:
-                pass
-            else:
-                modified += l
-
-        structured = modified.split("\n")
-
-        final = ""
-
-        for l in structured:
-            l += "\n"
-            if ";LAYER:" + str(target_layer - 3) + "\n" in l \
-                    or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # target layer
-                is_target = 1
-
-            if is_target == 1 and ";TYPE:FILL" in l:
-                final += l
-                is_infill = 1
-            if is_target == 1 and ";TYPE:SKIN" in l:
-                final += l
-                is_infill = 1
-
-            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
-                is_target = 0
-                is_infill = 0
-                final += full_structure
-                final += l
-            elif is_target == 1 and is_infill == 1:
-                pass
-            else:
-                final += l
-
-        if flag == 0:
-            with open(file_name.split(".gcode")[0] + "_grid.gcode", "w") as f:
-                f.write(final)
-        elif flag == 1:
-            with open(file_name, "w") as f:
-                f.write(final)
-
-    # blob structure
-    elif type == "blob":
-        # add a and b structure
-        for l in lines:
-            if ";LAYER:" + str(target_layer) + "\n" in l\
-                    or ";LAYER:" + str(target_layer + 1) + "\n" in l:  # target layer
-                is_target = 1
-                if ";LAYER:" + str(target_layer + 1) + "\n" in l:
-                    is_b = 1
-                    #modified += mesh_f_replaced + "\n"
-
-            if is_target == 1 and ";TYPE:FILL" in l:
-                modified += l
-                is_infill = 1
-
-            if is_target == 1 and ";TYPE:SKIN" in l:
-                modified += l
-                is_infill = 1
-
-            if ";TIME_ELAPSED:" in l and is_target == 1 and is_infill == 1:
-                is_target = 0
-                is_infill = 0
-                if is_b == 0:
-
-                    modified += a_structure
-                    modified += mesh + "\n"
-                    modified += "\n"
-                    for p in pause_code:
-                        modified += p
-                    modified += "\n"
-                    modified += mesh_f_replaced + "\n"
-                else:
-                    modified += b_structure
-                    is_b = 0
-            elif is_target == 1 and is_infill == 1:
-                pass
-            else:
-                modified += l
-
-        structured = modified.split("\n")
-
-        final = ""
-
-        for l in structured:
-            l += "\n"
-            if ";LAYER:" + str(target_layer - 1) + "\n" in l\
-                    or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # target layer
-                is_target = 1
-
-            if is_target == 1 and ";TYPE:FILL" in l:
-                final += l
-                is_infill = 1
-            if is_target == 1 and ";TYPE:SKIN" in l:
-                final += l
-                is_infill = 1
-
-            if ";MESH:NONMESH" in l and is_target == 1 and is_infill == 1:
-                is_target = 0
-                is_infill = 0
-                final += full_structure
-                final += l
-            elif is_target == 1 and is_infill == 1:
-                pass
-            else:
-                final += l
-
-        if flag == 0:
-            with open(file_name.split(".gcode")[0] + "_blob.gcode", "w") as f:
-                f.write(final)
-        elif flag == 1:
-            with open(file_name, "w") as f:
-                f.write(final)
-
-
-def adhesion_structure_vertical(file_name, target_layers, type, temps):
-
-    target_layers.sort()
-
-    # todo: handle layer number issue (what if the layer number is invalid??
-    if len(target_layers) == 1:
-        replace_infill_to_adhesion_structure(file_name, target_layers[0], type, temps[1], flag=0)
-
-    if len(target_layers) > 2:
+    if len(target_layers) > 1:  # muptiple interfaces
         for i in range(1, len(target_layers)):
-            replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i], type, flag=1)
-
-
-def adhesion_structure_vertical_dual(filename, type):
-    target_layers = find_target_layer(filename)
-    #replace_infill_to_adhesion_structure(filename, t, type)
-
-    replace_infill_to_adhesion_structure_for_dual_extruder(filename, target_layers[0], type, flag=0)
-
-    if len(target_layers) > 1:
-        for i in range(1, len(target_layers)):
-            replace_infill_to_adhesion_structure_for_dual_extruder(filename.split(".gcode")[0] + "_" + type + ".gcode", target_layers[i],
-                                                 type, flag=1)
+            replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + adhesion_type + ".gcode",
+                                                 target_layers[i], adhesion_type, temps[i], no_extruder, flag=1)
 
 
 if __name__ == "__main__":

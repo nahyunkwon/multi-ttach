@@ -32,6 +32,6 @@ if __name__ == "__main__":
     #adhesion_structure("./gcode/CE3_cylinder.gcode", [10], "grid")
     #adhesion_structure_vertical("./example/another_gripper.gcode", [7], "grid")
 
-    adhesion_structure_horizontal("./gcode_dual/FCPRO_final_abs_cpla_3.gcode")
+    adhesion_structure_horizontal("./gcode_dual/Pliers_3.gcode")
 
     #calculate_extrusion_amount("./gcode/CE3_final_grid.gcode")

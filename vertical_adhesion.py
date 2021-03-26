@@ -122,7 +122,7 @@ def get_min_max(input_list):
     return min_value, max_value
 
 
-def get_largest_polygon(x_values, y_values):
+def get_all_polygons(x_values, y_values):
     '''
     Get the largest polygon among multiple polygons (if exist)
     :param x_values: a list of all x coordinates in infill
@@ -138,30 +138,35 @@ def get_largest_polygon(x_values, y_values):
     for i in range(len(x_values)):
         if x_values[i] == "G0":  # next polygon
             if len(polygon_coords) != 0:
-                areas.append(Polygon(polygon_coords).area)
-                all_polygons.append(polygon_coords)
+                #areas.append(Polygon(polygon_coords).area)
+                all_polygons.append([polygon_coords, Polygon(polygon_coords).area])
                 polygon_coords = []
         else:
             coord = [x_values[i], y_values[i]]
             if len(coord) != 0:
                 polygon_coords.append(coord)
 
+    polygons_df = pd.DataFrame(all_polygons, columns=['polygon', 'area'])
+
+    polygons_df = polygons_df.sort_values(by=['area'], ascending=False)
+    print(polygons_df)
+    '''
     max_area = areas[0]
     max_index = 0
-
-    #print(areas)
 
     for i in range(len(areas)):
         if areas[i] > max_area:
             max_area = areas[i]
             max_index = i
+    '''
+    #all_polygons_final = []
+    #all_polygon_areas = []
 
-    all_polygons_final = []
-    for i in range(len(all_polygons)):
-       if len(all_polygons[i]) != 0:
-            all_polygons_final.append(all_polygons[i])
-    #print(len(all_polygons_final))
-    return all_polygons_final
+    #for i in range(len(all_polygons)):
+    #   if len(all_polygons[i]) != 0:
+    #        all_polygons_final.append(all_polygons[i])
+
+    return polygons_df['polygon']
 
 
 def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
@@ -233,95 +238,125 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             y_values.append("G0")
 
     # all polygons
-    polygon_coords = get_largest_polygon(x_values, y_values)
+    all_polygons_coords = get_all_polygons(x_values, y_values)
 
     set_a_x = []
     set_a_y = []
     set_b_x = []
     set_b_y = []
 
-    for polygon in polygon_coords:
-        polygon.append(polygon[0])
+    print(len(all_polygons_coords))
 
-        # print(polygon_coords)
+    inner_polygons_index = []
 
-        x_values = []
-        y_values = []
+    for index in range(len(all_polygons_coords)):
+        if index in inner_polygons_index:
+            print(index)
+            pass
+        else:
+            polygon = all_polygons_coords[index]
+            inner_polygons = []
 
-        for i in range(len(polygon)):
-            x_values.append(polygon[i][0])
-            y_values.append(polygon[i][1])
+            for a in range(index + 1, len(all_polygons_coords)):
+                smaller_polygon = all_polygons_coords[a]
+                is_in = True
+                for b in range(len(smaller_polygon)):
+                    if not Polygon(polygon).contains(Point(smaller_polygon[b])):
+                        is_in = False
+                        break
 
-        # print(polygon.area)
+                if is_in:
+                    inner_polygons.append(smaller_polygon)
+                    inner_polygons_index.append(a)
 
-        x_min, x_max = get_min_max(x_values)
-        y_min, y_max = get_min_max(y_values)
+            polygon.append(polygon[0])
 
-        grid_x = []
-        grid_y = []
+            # print(polygon_coords)
 
-        current_x = x_min + gap / 2.2
-        current_y = y_min + gap / 2.2
-        # print(x_min)
-        # print(y_min)
+            x_values = []
+            y_values = []
 
-        grid_x.append(current_x)
-        grid_y.append(current_y)
+            for i in range(len(polygon)):
+                x_values.append(polygon[i][0])
+                y_values.append(polygon[i][1])
 
-        while current_x <= x_max:
-            current_x += gap
+            # print(polygon.area)
+
+            x_min, x_max = get_min_max(x_values)
+            y_min, y_max = get_min_max(y_values)
+
+            grid_x = []
+            grid_y = []
+
+            current_x = x_min + gap / 2.2
+            current_y = y_min + gap / 2.2
+            # print(x_min)
+            # print(y_min)
+
             grid_x.append(current_x)
-        while current_y <= y_max:
-            current_y += gap
             grid_y.append(current_y)
 
-        # print(grid_x)
-        # print(grid_y)
+            while current_x <= x_max:
+                current_x += gap
+                grid_x.append(current_x)
+            while current_y <= y_max:
+                current_y += gap
+                grid_y.append(current_y)
 
-        # a structure
-        a_x = []
-        a_y = []
+            # print(grid_x)
+            # print(grid_y)
 
-        polygon = Polygon(polygon)
+            # a structure
+            a_x = []
+            a_y = []
 
-        for i in range(len(grid_x)):
-            for j in range(len(grid_y)):
-                current_point = Point(grid_x[i], grid_y[j])
+            polygon = Polygon(polygon)
 
-                if polygon.contains(current_point):
+            for i in range(len(grid_x)):
+                for j in range(len(grid_y)):
+                    current_point = Point(grid_x[i], grid_y[j])
 
-                    if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
-                        a_x.append(current_point.x)
-                        a_y.append(current_point.y)
+                    if polygon.contains(current_point):
 
-        a_coords = []  # coordinates of a structure
+                        if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
+                            if len(inner_polygons) > 0:  # has inner polygons
+                                for inner_poly in inner_polygons:
+                                    if not Polygon(inner_poly).contains(Point(a_x, a_y)):
+                                        a_x.append(current_point.x)
+                                        a_y.append(current_point.y)
 
-        for i in range(len(a_x)):
-            a_coords.append([a_x[i], a_y[i]])
+                            else:  # no inner polygon
+                                a_x.append(current_point.x)
+                                a_y.append(current_point.y)
 
-        # print(a_coords)
+            a_coords = []  # coordinates of a structure
 
-        # print(sorted(a_coords, key=lambda x: x[1]))
+            for i in range(len(a_x)):
+                a_coords.append([a_x[i], a_y[i]])
 
-        # x and y values for b structure
-        b_x = []
-        b_y = []
+            # print(a_coords)
 
-        # check if the unit square is included in the polygon
-        for i in range(len(a_coords)):
-            if unit_square_is_included(a_coords[i], gap, a_coords):
-                b_x.append(a_coords[i][0] + gap / 2)
-                b_y.append(a_coords[i][1] + gap / 2)
+            # print(sorted(a_coords, key=lambda x: x[1]))
 
-        # plt.plot(x_values, y_values, linewidth=0.2)
-        # plt.plot(a_x, a_y, 'bo', markersize=0.1)
-        # plt.plot(b_x, b_y, 'go')
-        # plt.show()
+            # x and y values for b structure
+            b_x = []
+            b_y = []
 
-        set_a_x.append(a_x)
-        set_a_y.append(a_y)
-        set_b_x.append(b_x)
-        set_b_y.append(b_y)
+            # check if the unit square is included in the polygon
+            for i in range(len(a_coords)):
+                if unit_square_is_included(a_coords[i], gap, a_coords):
+                    b_x.append(a_coords[i][0] + gap / 2)
+                    b_y.append(a_coords[i][1] + gap / 2)
+
+            # plt.plot(x_values, y_values, linewidth=0.2)
+            # plt.plot(a_x, a_y, 'bo', markersize=0.1)
+            # plt.plot(b_x, b_y, 'go')
+            # plt.show()
+
+            set_a_x.append(a_x)
+            set_a_y.append(a_y)
+            set_b_x.append(b_x)
+            set_b_y.append(b_y)
 
         #return a_x, a_y, b_x, b_y
 
@@ -348,8 +383,8 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     # a-structure
 
-    g0 = "G0 F9500 "
-    g1 = "G1 F2000 "
+    g0 = "G0 F5000 "
+    g1 = "G1 F1000 "
 
     a_structure = ""
 
@@ -370,8 +405,10 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     for i in range(len(a_x)):
         if i + 1 < len(a_x):
             if a_final[i + 1][0] == a_final[i][0]:  # at the same line (y-axis)
-                a_structure += g1 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + " E" + str(
-                    extrusion) + "\n"
+                if a_final[i + 1][1] - a_final[i][1] == gap:
+                    a_structure += g1 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + " E" + str(extrusion) + "\n"
+                else:
+                    a_structure += g0 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + "\n"
             elif a_final[i + 1][0] > a_final[i][0]:  # next line
                 a_structure += g0 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + "\n"
 
@@ -400,7 +437,10 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     for i in range(len(v_final)):
         if i + 1 < len(v_final):
             if v_final[i + 1][1] == v_final[i][1]:  # at the same line (x-axis)
-                a_structure += g1 + "X" + str(v_final[i + 1][0]) + " Y" + str(v_final[i + 1][1]) + " E" + str(extrusion) + "\n"
+                if v_final[i + 1][0] - v_final[i][0] == gap:
+                    a_structure += g1 + "X" + str(v_final[i + 1][0]) + " Y" + str(v_final[i + 1][1]) + " E" + str(extrusion) + "\n"
+                else:
+                    a_structure += g0 + "X" + str(v_final[i + 1][0]) + " Y" + str(v_final[i + 1][1]) + "\n"
             elif a_x[i + 1] > a_x[i]:  # next line
                 a_structure += g0 + "X" + str(v_final[i + 1][0]) + " Y" + str(v_final[i + 1][1]) + "\n"
 
@@ -409,7 +449,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     filling = 0.9  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
-    g0 = "G0 F9500 "
+    g0 = "G0 F5000 "
     g1 = "G1 F50 "
 
     count = 0
@@ -569,8 +609,8 @@ def generate_full_infill(a_x, a_y, gap=0.2):
 
     # a-structure
 
-    g0 = "G0 F9500 "
-    g1 = "G1 F2000 "
+    g0 = "G0 F5000 "
+    g1 = "G1 F1000 "
 
     a_structure = ""
 
@@ -581,12 +621,20 @@ def generate_full_infill(a_x, a_y, gap=0.2):
 
     extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
 
-    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    #a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    try:
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    except IndexError:
+        return ""
 
     for i in range(len(a_x)):
         if i + 1 < len(a_x):
             if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
-                a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                #a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                if a_y[i + 1] - a_y[i] <= gap:
+                    a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                else:
+                    a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
             elif a_x[i + 1] > a_x[i]:  # next line
                 a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
 
@@ -596,14 +644,16 @@ def generate_full_infill(a_x, a_y, gap=0.2):
 
 
 def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no_extruder, flag):
-    '''
-    replace infill of the target layer to adhesion structure
-    :param file_name: location of source gcode file
-    :param target_layer: target layer
-    :param type: type of adhesion structure
-    :return: null
-    '''
+    """
 
+    :param file_name:
+    :param target_layer:
+    :param type:
+    :param temp:
+    :param no_extruder:
+    :param flag:
+    :return:
+    """
     gcode = open(file_name)
 
     if no_extruder == 1:  # single extruder
@@ -613,7 +663,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
 
         for p in pause_code_lines:
             pause_code += p
-            if ";temp change" in p and str(temp) != "-1":
+            if ";temp change" in p and str(temp) != "-1":  # if temp == -1, no need to add temp change code
                 pause_code += "\nM104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
 
     elif no_extruder == 2:  # dual extruder
@@ -839,7 +889,7 @@ def find_target_layers_for_dual_extruder(filename):
             left_tool = 1
         if ";LAYER:0" in l:
             in_layers = 1
-            print("layer 0")
+            #print("layer 0")
         if "M135 T0" in l and left_tool == 0 and in_layers == 1:
             tool_change = 0
             right_tool = 1
@@ -880,10 +930,11 @@ def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, 
     """
 
     #target_layers.sort()
-    target_layers = target_layers[1:]  # remove layer:0
+    #target_layers = target_layers[1:]  # remove layer:0
+    #temps = temps[1:]
 
-    if len(target_layers) == 1:  # only on interface
-        replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temps[1], no_extruder, flag=0)
+    # only on interface
+    replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temps[0], no_extruder, flag=0)
 
     if len(target_layers) > 1:  # muptiple interfaces
         for i in range(1, len(target_layers)):
@@ -891,8 +942,53 @@ def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, 
                                                  target_layers[i], adhesion_type, temps[i], no_extruder, flag=1)
 
 
+def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_extruder=2):
+    """
+    Generate adhesion structure for vertical adhesion
+    :param file_name: source gcode file
+    :param adhesion_type: "blob" or "grid"
+    :param materials: material list in sequential order
+    :param target_layers: interface layer numbers (the first element is always 0)
+    :param temps: temperature list in sequential order
+    :param no_extruder: the number of extruder. single(1) or dual(2)
+    :return: none
+    """
+
+    target_layers_dual = find_target_layers_for_dual_extruder(file_name)
+    target_layers = []
+    for i in target_layers_dual:
+        if i > 5:
+            target_layers.append(i)
+
+    #target_layers.sort()
+    #target_layers = target_layers[1:]  # remove layer:0
+
+    if len(target_layers) == 1:  # only on interface
+        replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temp=-1, no_extruder=2, flag=0)
+
+    if len(target_layers) > 1:  # muptiple interfaces
+        for i in range(1, len(target_layers)):
+            replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + adhesion_type + ".gcode",
+                                                 target_layers[i], adhesion_type, temp=-1, no_extruder=2, flag=1)
+
+
 if __name__ == "__main__":
-    replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "blob", 230, flag=0)
-    replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "grid", 230, flag=0)
-    #replace_infill_to_adhesion_structure("./example/CE3_gripper.gcode", 15, "grid", flag=0)
+    #replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "blob", 230, flag=0)
+    #replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "grid", 230, flag=0)
+    #replace_infill_to_adhesion_structure("./gcode_dual/FCPRO_gripper.gcode", 7, "grid", temp=-1, no_extruder=1, flag=0)
     #get_grid_points_for_target_layer("./gcode/CE3_cylinder.gcode", 15, gap=2)
+
+    get_grid_points_for_target_layer("./gcode_dual/FCPRO_cylinder_hole.gcode", 9, gap=2)
+
+    #adhesion_structure_vertical_for_dual_extruder("./gcode_dual/FCPRO_cylinder_hole.gcode", "grid")
+
+    '''
+    x_1 = [0, 0, 1, 1, 0]
+    y_1 = [0, 1, 1, 0, 0]
+    x_2 = [-1, -1, 2, 2, -1]
+    y_2 = [-1, 2, 2, -1, -1]
+
+    plt.fill(x_1+x_2, y_1+y_2)
+    #plt.plot(x_2, y_2)
+    plt.show()
+    '''

@@ -65,7 +65,7 @@ def upload_file_2():
 
         type = request.form['options']
 
-        adhesion_structure_vertical_dual("./user_files/" + f.filename, type)
+        adhesion_structure_vertical_for_dual_extruder("./user_files/" + f.filename, type)
 
         output_file = f.filename.split(".gcode")[0] + "_" + type + ".gcode"
         time.sleep(5)

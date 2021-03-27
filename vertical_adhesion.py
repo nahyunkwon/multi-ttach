@@ -149,8 +149,16 @@ def get_all_polygons(x_values, y_values):
     polygons_df = pd.DataFrame(all_polygons, columns=['polygon', 'area'])
 
     polygons_df = polygons_df.sort_values(by=['area'], ascending=False)
-    print(polygons_df)
     '''
+    for i in range(len(polygons_df)):
+        print(polygons_df.iloc[i]['polygon'])
+
+    outer_poly = Polygon(polygons_df.iloc[0])
+    for i in polygons_df.iloc[1]['polygon']:
+        if not outer_poly.contains(i[0], i[1]):
+            print(i)
+
+ 
     max_area = areas[0]
     max_index = 0
 
@@ -165,8 +173,11 @@ def get_all_polygons(x_values, y_values):
     #for i in range(len(all_polygons)):
     #   if len(all_polygons[i]) != 0:
     #        all_polygons_final.append(all_polygons[i])
-
-    return polygons_df['polygon']
+    #for i in range(len(polygons_df)):
+    #    plt.fill(polygons_df.iloc[i]['polygon'])
+    #plt.show()
+    #return
+    return polygons_df
 
 
 def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
@@ -245,7 +256,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     set_b_x = []
     set_b_y = []
 
-    print(len(all_polygons_coords))
+    #print(Polygon(all_polygons_coords.iloc[1]['polygon']).area)
 
     inner_polygons_index = []
 
@@ -254,16 +265,17 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             print(index)
             pass
         else:
-            polygon = all_polygons_coords[index]
+            polygon = all_polygons_coords.iloc[index]['polygon']
             inner_polygons = []
 
             for a in range(index + 1, len(all_polygons_coords)):
-                smaller_polygon = all_polygons_coords[a]
+                smaller_polygon = all_polygons_coords.iloc[a]['polygon']
+
                 is_in = True
                 for b in range(len(smaller_polygon)):
-                    if not Polygon(polygon).contains(Point(smaller_polygon[b])):
+                    if not Polygon(polygon).contains(Point([smaller_polygon[b][0], smaller_polygon[b][1]])):
                         is_in = False
-                        break
+                        print(smaller_polygon[b])
 
                 if is_in:
                     inner_polygons.append(smaller_polygon)
@@ -321,7 +333,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
                         if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
                             if len(inner_polygons) > 0:  # has inner polygons
                                 for inner_poly in inner_polygons:
-                                    if not Polygon(inner_poly).contains(Point(a_x, a_y)):
+                                    if not Polygon(inner_poly).contains(Point(current_point.x, current_point.y)):
                                         a_x.append(current_point.x)
                                         a_y.append(current_point.y)
 
@@ -349,9 +361,9 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
                     b_y.append(a_coords[i][1] + gap / 2)
 
             # plt.plot(x_values, y_values, linewidth=0.2)
-            # plt.plot(a_x, a_y, 'bo', markersize=0.1)
-            # plt.plot(b_x, b_y, 'go')
-            # plt.show()
+            plt.plot(a_x, a_y, 'bo', markersize=0.1)
+            plt.plot(b_x, b_y, 'go')
+            plt.show()
 
             set_a_x.append(a_x)
             set_a_y.append(a_y)
@@ -383,8 +395,8 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     # a-structure
 
-    g0 = "G0 F5000 "
-    g1 = "G1 F1000 "
+    g0 = "G0 F1500 "
+    g1 = "G1 F50 "
 
     a_structure = ""
 
@@ -405,7 +417,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     for i in range(len(a_x)):
         if i + 1 < len(a_x):
             if a_final[i + 1][0] == a_final[i][0]:  # at the same line (y-axis)
-                if a_final[i + 1][1] - a_final[i][1] == gap:
+                if a_final[i + 1][1] - a_final[i][1] <= gap:
                     a_structure += g1 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + " E" + str(extrusion) + "\n"
                 else:
                     a_structure += g0 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + "\n"
@@ -449,7 +461,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     filling = 0.9  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
-    g0 = "G0 F5000 "
+    g0 = "G0 F1000 "
     g1 = "G1 F50 "
 
     count = 0
@@ -574,8 +586,8 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     #print(b_final)
 
     # a-structure
-    g0 = "G0 F9500 "
-    g1 = "G1 F9500 "
+    g0 = "G0 F1000 "
+    g1 = "G1 F50 "
 
     a_structure = ""
     b_structure = ""
@@ -603,14 +615,14 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     return a_structure, b_structure
 
 
-def generate_full_infill(a_x, a_y, gap=0.2):
+def generate_full_infill(a_x, a_y, gap=0.6):
 
     arbitrary = 0.4  # arbitrary number to optimize extrusion amount
 
     # a-structure
 
-    g0 = "G0 F5000 "
-    g1 = "G1 F1000 "
+    g0 = "G0 F1000 "
+    g1 = "G1 F50 "
 
     a_structure = ""
 
@@ -910,7 +922,7 @@ def find_target_layers_for_dual_extruder(filename):
             print("tool-change left tool")
         if tool_change == 1 and ";LAYER:" in l:
             target_no = int(l.split(":")[1])
-            print(target_no)
+            #print(target_no)
             tool_change = 0
             target_no -= 2
             target_l.append(target_no)
@@ -978,17 +990,39 @@ if __name__ == "__main__":
     #replace_infill_to_adhesion_structure("./gcode_dual/FCPRO_gripper.gcode", 7, "grid", temp=-1, no_extruder=1, flag=0)
     #get_grid_points_for_target_layer("./gcode/CE3_cylinder.gcode", 15, gap=2)
 
-    get_grid_points_for_target_layer("./gcode_dual/FCPRO_cylinder_hole.gcode", 9, gap=2)
-
+    #get_grid_points_for_target_layer("./gcode_dual/FCPRO_cylinder_hole.gcode", 9, gap=2)
+    #adhesion_structure_vertical("./gcode/CE3_sandal_85.gcode", "grid", [30, 50], temps= [-1], no_extruder=1)
     #adhesion_structure_vertical_for_dual_extruder("./gcode_dual/FCPRO_cylinder_hole.gcode", "grid")
+    #file_name = "gcode_dual/FCPRO_gripper.gcode"
+    file_name = "gcode_dual/FCPRO_cylinder_hole.gcode"
+    print(find_target_layers_for_dual_extruder(file_name))
+    #replace_infill_to_adhesion_structure(file_name, 7, "grid", -1, no_extruder=2, flag=0)
 
-    '''
+    file_name = "gcode/CE3_sandal_85.gcode"
+    adhesion_type = "grid"
+    target_layers = [30, 50]
+    temps = [-1, -1]
+    no_extruder = 1
+    adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder)
+'''
     x_1 = [0, 0, 1, 1, 0]
     y_1 = [0, 1, 1, 0, 0]
     x_2 = [-1, -1, 2, 2, -1]
     y_2 = [-1, 2, 2, -1, -1]
+    a = []
+    b = []
+    for i in range(len(x_1)):
+        a.append([x_1[i], y_1[i]])
+        b.append([x_2[i], y_2[i]])
 
-    plt.fill(x_1+x_2, y_1+y_2)
+    #plt.fill(x_1+x_2, y_1+y_2)
     #plt.plot(x_2, y_2)
-    plt.show()
-    '''
+    #plt.show()
+
+    poly = Polygon(b)
+
+    for i in range(len(x_1)):
+        if poly.contains(Point([x_1[i], y_1[i]])):
+            print("yes")
+
+'''

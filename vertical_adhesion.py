@@ -395,8 +395,8 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     # a-structure
 
-    g0 = "G0 F1500 "
-    g1 = "G1 F50 "
+    g0 = "G0 F5000 "
+    g1 = "G1 F500 "
 
     a_structure = ""
 
@@ -417,7 +417,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     for i in range(len(a_x)):
         if i + 1 < len(a_x):
             if a_final[i + 1][0] == a_final[i][0]:  # at the same line (y-axis)
-                if a_final[i + 1][1] - a_final[i][1] <= gap:
+                if abs(a_final[i + 1][1] - a_final[i][1]) <= gap:
                     a_structure += g1 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + " E" + str(extrusion) + "\n"
                 else:
                     a_structure += g0 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + "\n"
@@ -461,7 +461,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
     filling = 0.9  # optimized amount (by experiments) of extrusion for filling empty spaces of grid
 
-    g0 = "G0 F1000 "
+    g0 = "G0 F5000 "
     g1 = "G1 F50 "
 
     count = 0
@@ -617,11 +617,11 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
 
 def generate_full_infill(a_x, a_y, gap=0.6):
 
-    arbitrary = 0.4  # arbitrary number to optimize extrusion amount
+    arbitrary = 0.2  # arbitrary number to optimize extrusion amount
 
     # a-structure
 
-    g0 = "G0 F1000 "
+    g0 = "G0 F5000 "
     g1 = "G1 F50 "
 
     a_structure = ""
@@ -643,7 +643,7 @@ def generate_full_infill(a_x, a_y, gap=0.6):
         if i + 1 < len(a_x):
             if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
                 #a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
-                if a_y[i + 1] - a_y[i] <= gap:
+                if abs(a_y[i + 1] - a_y[i]) <= gap:
                     a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
                 else:
                     a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"

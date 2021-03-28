@@ -331,11 +331,11 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     #print(Polygon(all_polygons_coords.iloc[1]['polygon']).area)
 
     inner_polygons_index = []
-    print(all_polygons_coords)
+    #print(all_polygons_coords)
 
     for index in range(len(all_polygons_coords)):
         if index in inner_polygons_index:
-            print("inner-polygon", index, all_polygons_coords.iloc[index]['area'])
+            #print("inner-polygon", index, all_polygons_coords.iloc[index]['area'])
             pass
         else:
             polygon = all_polygons_coords.iloc[index]['polygon']
@@ -348,7 +348,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
                 for b in range(len(smaller_polygon)):
                     if not Polygon(polygon).contains(Point([smaller_polygon[b][0], smaller_polygon[b][1]])):
                         is_in = False
-                        print(smaller_polygon[b])
+                        #print(smaller_polygon[b])
 
                 if is_in:
                     inner_polygons.append(smaller_polygon)
@@ -599,7 +599,7 @@ def generate_full_infill(a_x, a_y, gap=0.6):
         if i + 1 < len(a_x):
             if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
                 #a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
-                print(abs(a_y[i + 1] - a_y[i]))
+                #print(abs(a_y[i + 1] - a_y[i]))
                 if abs(a_y[i + 1] - a_y[i]) <= gap+0.2:
                     a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
                 else:
@@ -741,37 +741,38 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
 
     pop_list = []
     index = 0
-    # get mesh code of the target layer
-    for l in lines:
-        if ";LAYER:" + str(target_layer) + "\n" in l:
-            is_target = 1
-        if ";MESH:NONMESH" in l and is_target == 1:
-            is_mesh = 1
+    if no_extruder == 1:
+        # get mesh code of the target layer
+        for l in lines:
+            if ";LAYER:" + str(target_layer) + "\n" in l:
+                is_target = 1
+            if ";MESH:NONMESH" in l and is_target == 1:
+                is_mesh = 1
 
-        if is_target == 1 and is_mesh == 1:
-            if ";TIME_ELAPSED:" in l:
-                break
-            mesh += l
-            pop_list.append(index)
+            if is_target == 1 and is_mesh == 1:
+                if ";TIME_ELAPSED:" in l:
+                    break
+                mesh += l
+                pop_list.append(index)
 
-        index += 1
+            index += 1
 
-    lines_a = lines
-    lines = []
-    for i in range(len(lines_a)):
-        if i not in pop_list:
-            lines.append(lines_a[i])
+        lines_a = lines
+        lines = []
+        for i in range(len(lines_a)):
+            if i not in pop_list:
+                lines.append(lines_a[i])
 
-    mesh_f_replaced = ""
+        mesh_f_replaced = ""
 
-    for m in mesh.split("\n"):
-        if "F300" in m:
-            m = m.replace("F300", "F9500")
-        if "Z" in m and type == "blob":
-            z = m.split("Z")[1]
-            new_z = float(z) - 0.2
-            m = m.replace("Z" + str(z), "Z" + str(round(new_z, 2)))
-        mesh_f_replaced += m + "\n"
+        for m in mesh.split("\n"):
+            if "F300" in m:
+                m = m.replace("F300", "F9500")
+            if "Z" in m and type == "blob":
+                z = m.split("Z")[1]
+                new_z = float(z) - 0.2
+                m = m.replace("Z" + str(z), "Z" + str(round(new_z, 2)))
+            mesh_f_replaced += m + "\n"
 
     is_target = 0
     is_infill = 0
@@ -783,9 +784,31 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
     mesh_each = ""
     is_mesh = 0
     start = 0
+    tool_change = ""
 
     if no_extruder == 2:
         mesh_f_replaced = ""
+
+        index = 0
+
+        for l in lines:
+            if ";LAYER:" + str(target_layer + 1) + "\n" in l:
+                is_b = 1
+            if is_b == 1 and ";MESH:" in l:
+                break
+
+            if is_b == 1:
+                if ";LAYER:" not in l:
+                    tool_change += l
+                    pop_list.append(index)
+
+            index += 1
+        print(tool_change)
+        lines_a = lines
+        lines = []
+        for i in range(len(lines_a)):
+            if i not in pop_list:
+                lines.append(lines_a[i])
 
     final = ""
 
@@ -827,6 +850,8 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
                 final += "\n;PAUSE-CODE\n" + pause_code + "\n"
                 final += mesh_f_replaced
                 final += l
+                if no_extruder == 2:
+                    final += tool_change
                 final += ";TYPE:GRID-B-STRUCTURE\n" + b_structure
                 final += ";TYPE:GRID-FULL-IN-B-STRUCTURE\n" + full_structure  # full infill for b-structure
             elif layer in a_structure_layers and ";LAYER:" in l:  # a-structure
@@ -883,6 +908,8 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
                 final += "\n;PAUSE-CODE\n" + pause_code + "\n"
                 final += mesh_f_replaced
                 final += l
+                if no_extruder == 2:
+                    final += tool_change
                 final += ";TYPE:BLOB-B-STRUCTURE\n" + b_structure
             elif layer in a_structure_layers and ";LAYER:" in l:  # a-structure
                 final += l
@@ -934,28 +961,28 @@ def find_target_layers_for_dual_extruder(filename):
         if "M135 T0" in l and left_tool == 0 and in_layers == 1:
             tool_change = 0
             right_tool = 1
-            print("right tool")
+            #print("right tool")
         if "M135 T1" in l and right_tool == 0 and in_layers == 1:
             tool_change = 0
             left_tool = 1
-            print("left tool")
+            #print("left tool")
         if "M135 T0" in l and left_tool == 1 and in_layers == 1:
             tool_change = 1
             right_tool = 1
             left_tool = 0
-            print("tool-change right tool")
+            #print("tool-change right tool")
         if "M135 T1" in l and right_tool == 1 and in_layers == 1:
             tool_change = 1
             left_tool = 1
             right_tool = 0
-            print("tool-change left tool")
+            #print("tool-change left tool")
         if tool_change == 1 and ";LAYER:" in l:
             target_no = int(l.split(":")[1])
             #print(target_no)
             tool_change = 0
             target_no -= 2
             target_l.append(target_no)
-            print("target_no", target_no)
+            #print("target_no", target_no)
     return target_l
 
 

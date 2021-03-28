@@ -198,6 +198,78 @@ def is_far_from_inner_wall(x, y, x_values, y_values, threshold):
     return True
 
 
+def get_zig_zag_for_lines(x, y):
+
+    final = []
+    line = []
+
+    line.append([x[0], y[0]])
+
+    for i in range(len(x) - 1):
+        if x[i + 1] == x[i]:  # at the same line
+            line.append([x[i + 1], y[i + 1]])
+        elif x[i + 1] > x[i]:  # next line
+            if len(final) % 2 == 0:
+                final.append(line)
+                line = []
+            else:
+                line.reverse()
+                final.append(line)
+                line = []
+            line.append([x[i+1], y[i+1]])
+
+    line.append([x[-1], y[-1]])
+    if len(final) % 2 == 0:
+        final.append(line)
+    else:
+        line.reverse()
+        final.append(line)
+
+    result = []
+
+    for f in final:
+        for i in f:
+            result.append(i)
+
+    return result
+
+
+def get_zig_zag_for_lines_for_y(x, y):
+
+    final = []
+    line = []
+
+    line.append([x[0], y[0]])
+
+    for i in range(len(y) - 1):
+        if y[i + 1] == y[i]:  # at the same line
+            line.append([x[i + 1], y[i + 1]])
+        elif y[i + 1] > y[i]:  # next line
+            if len(final) % 2 == 0:
+                final.append(line)
+                line = []
+            else:
+                line.reverse()
+                final.append(line)
+                line = []
+            line.append([x[i+1], y[i+1]])
+
+    line.append([x[-1], y[-1]])
+    if len(final) % 2 == 0:
+        final.append(line)
+    else:
+        line.reverse()
+        final.append(line)
+
+    result = []
+
+    for f in final:
+        for i in f:
+            result.append(i)
+
+    return result
+
+
 def get_grid_points_for_target_layer(file, target_layer, gap):
     '''
     get grid points inside infill on the target layer
@@ -259,10 +331,11 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     #print(Polygon(all_polygons_coords.iloc[1]['polygon']).area)
 
     inner_polygons_index = []
+    print(all_polygons_coords)
 
     for index in range(len(all_polygons_coords)):
         if index in inner_polygons_index:
-            print(index)
+            print("inner-polygon", index)
             pass
         else:
             polygon = all_polygons_coords.iloc[index]['polygon']
@@ -417,7 +490,7 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     for i in range(len(a_x)):
         if i + 1 < len(a_x):
             if a_final[i + 1][0] == a_final[i][0]:  # at the same line (y-axis)
-                if abs(a_final[i + 1][1] - a_final[i][1]) <= gap:
+                if abs(a_final[i + 1][1] - a_final[i][1]) <= gap+0.1:
                     a_structure += g1 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + " E" + str(extrusion) + "\n"
                 else:
                     a_structure += g0 + "X" + str(a_final[i + 1][0]) + " Y" + str(a_final[i + 1][1]) + "\n"
@@ -474,76 +547,45 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
     return a_structure, b_structure
 
 
-def get_zig_zag_for_lines(x, y):
+def generate_full_infill(a_x, a_y, gap=0.6):
 
-    final = []
-    line = []
+    arbitrary = 0.2  # arbitrary number to optimize extrusion amount
 
-    line.append([x[0], y[0]])
+    # a-structure
 
-    for i in range(len(x) - 1):
-        if x[i + 1] == x[i]:  # at the same line
-            line.append([x[i + 1], y[i + 1]])
-        elif x[i + 1] > x[i]:  # next line
-            if len(final) % 2 == 0:
-                final.append(line)
-                line = []
-            else:
-                line.reverse()
-                final.append(line)
-                line = []
-            line.append([x[i+1], y[i+1]])
+    g0 = "G0 F2000 "
+    g1 = "G1 F500 "
 
-    line.append([x[-1], y[-1]])
-    if len(final) % 2 == 0:
-        final.append(line)
-    else:
-        line.reverse()
-        final.append(line)
+    a_structure = ""
 
-    result = []
+    layer_height = 0.2
+    nozzle_dia = 0.4
+    length = gap
+    fa = ((1.75 / 2) ** 2) / math.pi
 
-    for f in final:
-        for i in f:
-            result.append(i)
+    extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
 
-    return result
+    #a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    try:
+        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
+    except IndexError:
+        return ""
 
+    for i in range(len(a_x)):
+        if i + 1 < len(a_x):
+            if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
+                #a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                print(abs(a_y[i + 1] - a_y[i]))
+                if abs(a_y[i + 1] - a_y[i]) <= gap+0.2:
+                    a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
+                else:
+                    a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
+            elif a_x[i + 1] > a_x[i]:  # next line
+                a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
 
-def get_zig_zag_for_lines_for_y(x, y):
+    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
 
-    final = []
-    line = []
-
-    line.append([x[0], y[0]])
-
-    for i in range(len(y) - 1):
-        if y[i + 1] == y[i]:  # at the same line
-            line.append([x[i + 1], y[i + 1]])
-        elif y[i + 1] > y[i]:  # next line
-            if len(final) % 2 == 0:
-                final.append(line)
-                line = []
-            else:
-                line.reverse()
-                final.append(line)
-                line = []
-            line.append([x[i+1], y[i+1]])
-
-    line.append([x[-1], y[-1]])
-    if len(final) % 2 == 0:
-        final.append(line)
-    else:
-        line.reverse()
-        final.append(line)
-
-    result = []
-
-    for f in final:
-        for i in f:
-            result.append(i)
-
-    return result
+    return a_structure
 
 
 def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
@@ -615,46 +657,6 @@ def generate_blob_infill(a_x, a_y, b_x, b_y, gap, file_name, target_layer):
     return a_structure, b_structure
 
 
-def generate_full_infill(a_x, a_y, gap=0.6):
-
-    arbitrary = 0.2  # arbitrary number to optimize extrusion amount
-
-    # a-structure
-
-    g0 = "G0 F5000 "
-    g1 = "G1 F50 "
-
-    a_structure = ""
-
-    layer_height = 0.2
-    nozzle_dia = 0.4
-    length = gap
-    fa = ((1.75 / 2) ** 2) / math.pi
-
-    extrusion = (layer_height * nozzle_dia * length * arbitrary) / fa
-
-    #a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
-    try:
-        a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
-    except IndexError:
-        return ""
-
-    for i in range(len(a_x)):
-        if i + 1 < len(a_x):
-            if a_x[i + 1] == a_x[i]:  # at the same line (y-axis)
-                #a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
-                if abs(a_y[i + 1] - a_y[i]) <= gap:
-                    a_structure += g1 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + " E" + str(extrusion) + "\n"
-                else:
-                    a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
-            elif a_x[i + 1] > a_x[i]:  # next line
-                a_structure += g0 + "X" + str(a_x[i + 1]) + " Y" + str(a_y[i + 1]) + "\n"
-
-    a_structure += g0 + "X" + str(a_x[0]) + " Y" + str(a_y[0]) + "\n"
-
-    return a_structure
-
-
 def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no_extruder, flag):
     """
 
@@ -676,7 +678,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
         for p in pause_code_lines:
             pause_code += p
             if ";temp change" in p and str(temp) != "-1":  # if temp == -1, no need to add temp change code
-                pause_code += "\nM104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
+                pause_code += "M104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
 
     elif no_extruder == 2:  # dual extruder
         pause_code = ""
@@ -854,10 +856,10 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
                 final += "\n;PAUSE-CODE\n" + pause_code + "\n"
                 final += mesh_f_replaced
                 final += l
-                final += ";TYPE:GRID-B-STRUCTURE\n" + b_structure
+                final += ";TYPE:BLOB-B-STRUCTURE\n" + b_structure
             elif layer in a_structure_layers and ";LAYER:" in l:  # a-structure
                 final += l
-                final += ";TYPE:GRID-A-STRUCTURE\n" + a_structure
+                final += ";TYPE:BLOB-A-STRUCTURE\n" + a_structure
             elif ";LAYER:" + str(target_layer - 1) + "\n" in l or ";LAYER:" + str(target_layer + 2) + "\n" in l:  # full infill
                 final += l
                 final += ";TYPE:FULL-STRUCTURE\n" + full_structure
@@ -926,6 +928,7 @@ def find_target_layers_for_dual_extruder(filename):
             tool_change = 0
             target_no -= 2
             target_l.append(target_no)
+            print("target_no", target_no)
     return target_l
 
 
@@ -969,13 +972,17 @@ def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_e
     target_layers_dual = find_target_layers_for_dual_extruder(file_name)
     target_layers = []
     for i in target_layers_dual:
-        if i > 5:
-            target_layers.append(i)
-
+        if adhesion_type == "grid":
+            if i > 4:
+                target_layers.append(i)
+        elif adhesion_type == "blob":
+            if i > 2:
+                target_layers.append(i)
+    #print(len(target_layers))
     #target_layers.sort()
     #target_layers = target_layers[1:]  # remove layer:0
 
-    if len(target_layers) == 1:  # only on interface
+    if len(target_layers) == 1:  # only one interface
         replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temp=-1, no_extruder=2, flag=0)
 
     if len(target_layers) > 1:  # muptiple interfaces
@@ -985,44 +992,9 @@ def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_e
 
 
 if __name__ == "__main__":
-    #replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "blob", 230, flag=0)
-    #replace_infill_to_adhesion_structure("./gcode/PVA-PP_3.gcode", 127, "grid", 230, flag=0)
-    #replace_infill_to_adhesion_structure("./gcode_dual/FCPRO_gripper.gcode", 7, "grid", temp=-1, no_extruder=1, flag=0)
-    #get_grid_points_for_target_layer("./gcode/CE3_cylinder.gcode", 15, gap=2)
+    #adhesion_structure_vertical_for_dual_extruder("gcode_dual/FCPRO_gripper.gcode", "blob")
 
-    #get_grid_points_for_target_layer("./gcode_dual/FCPRO_cylinder_hole.gcode", 9, gap=2)
-    #adhesion_structure_vertical("./gcode/CE3_sandal_85.gcode", "grid", [30, 50], temps= [-1], no_extruder=1)
-    #adhesion_structure_vertical_for_dual_extruder("./gcode_dual/FCPRO_cylinder_hole.gcode", "grid")
-    #file_name = "gcode_dual/FCPRO_gripper.gcode"
-    file_name = "gcode_dual/FCPRO_cylinder_hole.gcode"
-    print(find_target_layers_for_dual_extruder(file_name))
-    #replace_infill_to_adhesion_structure(file_name, 7, "grid", -1, no_extruder=2, flag=0)
+    #replace_infill_to_adhesion_structure("gcode_dual/FCPRO_gripper.gcode", 3, "blob", temp=-1, no_extruder=2, flag=0)
+    #adhesion_structure_vertical("gcode/PLA-NYLON_3.gcode")
 
-    file_name = "gcode/CE3_sandal_85.gcode"
-    adhesion_type = "grid"
-    target_layers = [30, 50]
-    temps = [-1, -1]
-    no_extruder = 1
-    adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder)
-'''
-    x_1 = [0, 0, 1, 1, 0]
-    y_1 = [0, 1, 1, 0, 0]
-    x_2 = [-1, -1, 2, 2, -1]
-    y_2 = [-1, 2, 2, -1, -1]
-    a = []
-    b = []
-    for i in range(len(x_1)):
-        a.append([x_1[i], y_1[i]])
-        b.append([x_2[i], y_2[i]])
-
-    #plt.fill(x_1+x_2, y_1+y_2)
-    #plt.plot(x_2, y_2)
-    #plt.show()
-
-    poly = Polygon(b)
-
-    for i in range(len(x_1)):
-        if poly.contains(Point([x_1[i], y_1[i]])):
-            print("yes")
-
-'''
+    adhesion_structure_vertical(file_name="gcode/PLA-NYLON_3.gcode", adhesion_type="blob", target_layers=[127], temps=[230], no_extruder=1)

@@ -335,7 +335,7 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
     for index in range(len(all_polygons_coords)):
         if index in inner_polygons_index:
-            print("inner-polygon", index)
+            print("inner-polygon", index, all_polygons_coords.iloc[index]['area'])
             pass
         else:
             polygon = all_polygons_coords.iloc[index]['polygon']
@@ -395,6 +395,9 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
             a_x = []
             a_y = []
 
+            no_x = []
+            no_y = []
+
             polygon = Polygon(polygon)
 
             for i in range(len(grid_x)):
@@ -405,15 +408,34 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
                         if is_far_from_inner_wall(current_point.x, current_point.y, x_values, y_values, threshold=1):
                             if len(inner_polygons) > 0:  # has inner polygons
+                                include = True
                                 for inner_poly in inner_polygons:
-                                    if not Polygon(inner_poly).contains(Point(current_point.x, current_point.y)):
-                                        a_x.append(current_point.x)
-                                        a_y.append(current_point.y)
+                                    if Polygon(inner_poly).contains(Point(current_point.x, current_point.y)):
+                                        #print(current_point)
+                                        include = False
+
+                                        #exclude.append((i, j))
+                                    #else:
+                                    #    no_x.append(current_point.x)
+                                    #    no_y.append(current_point.y)
+                                if include:
+                                    a_x.append(current_point.x)
+                                    a_y.append(current_point.y)
 
                             else:  # no inner polygon
                                 a_x.append(current_point.x)
                                 a_y.append(current_point.y)
-
+            #print(len(exclude))
+            #print(len(set(exclude)))
+            #exclude = list(set(exclude))
+            '''
+            for i in range(len(grid_x)):
+                for j in range(len(grid_y)):
+                    if not (i, j) in exclude:
+                        current_point = Point(grid_x[i], grid_y[j])
+                        a_x.append(current_point.x)
+                        a_y.append(current_point.y)
+            '''
             a_coords = []  # coordinates of a structure
 
             for i in range(len(a_x)):
@@ -434,8 +456,10 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
                     b_y.append(a_coords[i][1] + gap / 2)
 
             # plt.plot(x_values, y_values, linewidth=0.2)
-            plt.plot(a_x, a_y, 'bo', markersize=0.1)
-            plt.plot(b_x, b_y, 'go')
+
+            plt.plot(a_x, a_y, 'ro', markersize=0.2)
+            plt.plot(b_x, b_y, 'go', markersize=0.2)
+            #plt.plot(no_x, no_y, 'bo', markersize=0.2)
             plt.show()
 
             set_a_x.append(a_x)
@@ -760,6 +784,9 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
     is_mesh = 0
     start = 0
 
+    if no_extruder == 2:
+        mesh_f_replaced = ""
+
     final = ""
 
     # grid structure
@@ -973,10 +1000,10 @@ def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_e
     target_layers = []
     for i in target_layers_dual:
         if adhesion_type == "grid":
-            if i > 4:
+            if i >= 4:
                 target_layers.append(i)
         elif adhesion_type == "blob":
-            if i > 2:
+            if i >= 2:
                 target_layers.append(i)
     #print(len(target_layers))
     #target_layers.sort()
@@ -992,9 +1019,11 @@ def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_e
 
 
 if __name__ == "__main__":
-    #adhesion_structure_vertical_for_dual_extruder("gcode_dual/FCPRO_gripper.gcode", "blob")
+    adhesion_structure_vertical_for_dual_extruder("gcode_dual/FCPRO_gripper.gcode", "blob")
 
     #replace_infill_to_adhesion_structure("gcode_dual/FCPRO_gripper.gcode", 3, "blob", temp=-1, no_extruder=2, flag=0)
     #adhesion_structure_vertical("gcode/PLA-NYLON_3.gcode")
+    #get_grid_points_for_target_layer("gcode_dual/FCPRO_gripper.gcode", 3, gap=2)
+    #get_grid_points_for_target_layer("gcode_dual/FCPRO_cylinder_hole.gcode", 3, gap=2)
 
-    adhesion_structure_vertical(file_name="gcode/PLA-NYLON_3.gcode", adhesion_type="blob", target_layers=[127], temps=[230], no_extruder=1)
+    #adhesion_structure_vertical(file_name="gcode_dual/FCPRO_gripper.gcode", adhesion_type="blob", target_layers=[3], temps=[-1], no_extruder=1)

@@ -16,7 +16,7 @@ def heating_top_layer(file_name, layer_no):
     :return: null
     """
     gcode = open(file_name, "r")
-    pause = open("pause_code.txt","r")
+    pause = open("pause_code.txt", "r")
     pauselines = pause.readlines()
     pausecode =""
     lines = gcode.readlines()
@@ -695,7 +695,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
     gcode = open(file_name)
 
     if no_extruder == 1:  # single extruder
-        pause_code_lines = open("./pause_code.txt").readlines()
+        pause_code_lines = open("pause_code.txt").readlines()
 
         pause_code = ""
 
@@ -1059,7 +1059,7 @@ if __name__ == "__main__":
     adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_extruder=2)
     #replace_infill_to_adhesion_structure(file_name, 41, 'blob', temp=-1, no_extruder=2, flag=0)
     '''
-    file_name = "gcode/CE3_final_1.gcode"
+    file_name = "../gcode/CE3_final_1.gcode"
 
     replace_infill_to_adhesion_structure(file_name, 20, 'grid', 210, no_extruder=1, flag=0)
     replace_infill_to_adhesion_structure(file_name, 20, 'blob', 210, no_extruder=1, flag=0)

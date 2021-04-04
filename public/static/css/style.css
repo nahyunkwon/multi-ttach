@@ -14,7 +14,7 @@ html {
 }
 #wrap {
     width:1000px;
-    height: 680px;
+    height: 850px;
     position: relative;
     margin: 20px auto;
     background:#ffffff;
@@ -54,7 +54,7 @@ html {
     width: 680px;
     height: 680px;
     border-width: 2px;
-    border-style: none none none solid;
+    border-style: none none none none;
     -webkit-border-top-right-radius: 10px;
     -webkit-border-bottom-right-radius: 10px;
     -moz-border-radius-topright: 10px;

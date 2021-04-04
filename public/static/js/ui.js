@@ -408,8 +408,8 @@ GCODE.ui = (function(){
                 return;
             }
             var dropZone = document.getElementById('drop_zone');
-            dropZone.addEventListener('dragover', handleDragOver, false);
-            dropZone.addEventListener('drop', handleFileSelect, false);
+            //dropZone.addEventListener('dragover', handleDragOver, false);
+            //dropZone.addEventListener('drop', handleFileSelect, false);
 
             document.getElementById('file0').addEventListener('change', handleFileSelect, false);
             document.getElementById('file1').addEventListener('change', handleFileSelect, false);

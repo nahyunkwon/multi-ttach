@@ -271,8 +271,8 @@ def adhesion_structure_horizontal(file_name):
 
         pairs = []
 
-        print(polygons_0)
-        print(polygons_1)
+        #print(polygons_0)
+        #print(polygons_1)
         # find material 0 - material 1 pairs
         for j in range(len(polygons_0)):
             for k in range(len(polygons_1)):

@@ -3,7 +3,7 @@ G0 F9500 X0 Y0 Z50
 M0 ; Pause
 G92 E0 ; Reset Extruder
 G28 ; Home all axes
-;temp change
+; temp change
 G0 Z50.0 F9500 ; Move Z Axis up little to prevent scratching of Heat Bed
 G0 X0.1 Y20 Z50.0 F5000.0
 G0 X0.1 Y20 Z0.3 F5000.0 ; Move to start position

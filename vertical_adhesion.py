@@ -573,12 +573,12 @@ def generate_grid_infill(a_x, a_y, b_x, b_y, gap):
 
 def generate_full_infill(a_x, a_y, gap=0.6):
 
-    arbitrary = 0.2  # arbitrary number to optimize extrusion amount
+    arbitrary = 0.4  # arbitrary number to optimize extrusion amount
 
     # a-structure
 
-    g0 = "G0 F2000 "
-    g1 = "G1 F500 "
+    g0 = "G0 F5000 "
+    g1 = "G1 F2000 "
 
     a_structure = ""
 
@@ -701,7 +701,7 @@ def replace_infill_to_adhesion_structure(file_name, target_layer, type, temp, no
 
         for p in pause_code_lines:
             pause_code += p
-            if ";temp change" in p and str(temp) != "-1":  # if temp == -1, no need to add temp change code
+            if "; temp change" in p and str(temp) != "-1":  # if temp == -1, no need to add temp change code
                 pause_code += "M104 S" + str(temp) + "\nM105\nM109 S" + str(temp) + "\n"
 
     elif no_extruder == 2:  # dual extruder
@@ -986,7 +986,7 @@ def find_target_layers_for_dual_extruder(filename):
     return target_l
 
 
-def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder):
+def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder=1):
     """
     Generate adhesion structure for vertical adhesion
     :param file_name: source gcode file
@@ -1046,11 +1046,24 @@ def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_e
 
 
 if __name__ == "__main__":
-    adhesion_structure_vertical_for_dual_extruder("gcode_dual/FCPRO_gripper.gcode", "blob")
-
+    #adhesion_structure_vertical_for_dual_extruder("gcode_dual/FCPRO_Tooth.gcode", "blob")
+    #adhesion_structure_vertical("gcode/CE3_sandal_85.gcode", "grid", [30, 50], [-1, -1], 1)
     #replace_infill_to_adhesion_structure("gcode_dual/FCPRO_gripper.gcode", 3, "blob", temp=-1, no_extruder=2, flag=0)
     #adhesion_structure_vertical("gcode/PLA-NYLON_3.gcode")
     #get_grid_points_for_target_layer("gcode_dual/FCPRO_gripper.gcode", 3, gap=2)
     #get_grid_points_for_target_layer("gcode_dual/FCPRO_cylinder_hole.gcode", 3, gap=2)
+    #print(find_target_layers_for_dual_extruder("gcode_dual/FCPRO_Tooth_TPU.gcode"))
+    '''
+    file_name = "gcode_dual/FCPRO_Tooth_support.gcode"
+    adhesion_type = 'blob'
+    adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_extruder=2)
+    #replace_infill_to_adhesion_structure(file_name, 41, 'blob', temp=-1, no_extruder=2, flag=0)
+    '''
+    file_name = "gcode/CE3_final_1.gcode"
+
+    replace_infill_to_adhesion_structure(file_name, 20, 'grid', 210, no_extruder=1, flag=0)
+    replace_infill_to_adhesion_structure(file_name, 20, 'blob', 210, no_extruder=1, flag=0)
+
+    #replace_infill_to_adhesion_structure(file_name, 127, 'grid', temp=210, no_extruder=1, flag=0)
 
     #adhesion_structure_vertical(file_name="gcode_dual/FCPRO_gripper.gcode", adhesion_type="blob", target_layers=[3], temps=[-1], no_extruder=1)

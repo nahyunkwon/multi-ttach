@@ -459,8 +459,10 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
 
             plt.plot(a_x, a_y, 'ro', markersize=0.2)
             plt.plot(b_x, b_y, 'go', markersize=0.2)
+
             #plt.plot(no_x, no_y, 'bo', markersize=0.2)
             plt.show()
+            return
 
             set_a_x.append(a_x)
             set_a_y.append(a_y)
@@ -1002,7 +1004,7 @@ def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, 
     #target_layers = target_layers[1:]  # remove layer:0
     #temps = temps[1:]
 
-    # only on interface
+    # the first interface
     replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temps[0], no_extruder, flag=0)
 
     if len(target_layers) > 1:  # muptiple interfaces
@@ -1059,10 +1061,12 @@ if __name__ == "__main__":
     adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_extruder=2)
     #replace_infill_to_adhesion_structure(file_name, 41, 'blob', temp=-1, no_extruder=2, flag=0)
     '''
-    file_name = "../gcode/CE3_final_1.gcode"
+    file_dir = "/Users/kwon/PycharmProjects/digital_fabrication_studio/"
+    file_name = "./gcode/CE3_brick.gcode"
+    replace_infill_to_adhesion_structure(file_name, 55, 'grid', 210, no_extruder=1, flag=0)
 
-    replace_infill_to_adhesion_structure(file_name, 20, 'grid', 210, no_extruder=1, flag=0)
-    replace_infill_to_adhesion_structure(file_name, 20, 'blob', 210, no_extruder=1, flag=0)
+    #replace_infill_to_adhesion_structure(file_name, 20, 'grid', 210, no_extruder=1, flag=0)
+    #replace_infill_to_adhesion_structure(file_name, 20, 'blob', 210, no_extruder=1, flag=0)
 
     #replace_infill_to_adhesion_structure(file_name, 127, 'grid', temp=210, no_extruder=1, flag=0)
 

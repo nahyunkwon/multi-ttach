@@ -32,7 +32,6 @@ ALLOWED_EXTENSIONS = {'.gcode'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
 @app.route('/uploader_1', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -43,6 +42,11 @@ def upload_file():
         temps = request.form['temperatures']
         type = request.form['options']
 
+        if type == 'bead':
+            type = 'blob'
+        elif type == 'lattice':
+            type = 'grid'
+
         layers_list = layers.split(",")
         
         layers_input = []
@@ -51,14 +55,19 @@ def upload_file():
 
         temps_list = temps.split(",")
         temps_input = []
-        for i in range(len(temps)):
-            temps_input.append(temps_list[i].strip())
+        for i in range(len(temps_list)):
+            temps_input.append(int(temps_list[i].strip()))
 
-        adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type, temps_input)
+        file_name = "./user_files/" + f.filename
+        adhesion_type = type
+        target_layers = layers_input
+        temps = temps_input
+        adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder=1)
+        #adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type, temps_input)
 
         output_file = f.filename.split(".gcode")[0]+"_"+type+".gcode"
         time.sleep(5)
-        return send_from_directory(directory="user_files", filename=output_file, as_attachment=True)
+        return send_from_directory(directory=UPLOAD_FOLDER, filename=output_file, as_attachment=True)
 
 
 @app.route('/uploader_2', methods=['GET', 'POST'])
@@ -68,6 +77,11 @@ def upload_file_2():
         f.save("./user_files/" + secure_filename(f.filename))
 
         type = request.form['options']
+
+        if type == 'bead':
+            type = 'blob'
+        elif type == 'lattice':
+            type = 'grid'
 
         adhesion_structure_vertical_for_dual_extruder("./user_files/" + f.filename, type)
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <title>gcode viewer - online gcode viewer and analyzer in your browser!</title>
+    <title>Multi-ttach</title>
     <meta name="description" content="Visual GCode viewer and analyzer in your browser. No need to upload you GCode anywhere, everything is done locally. " />
     <meta name="keywords" content="GCode,g-code,viewer,online,javascript" />
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
@@ -127,15 +127,31 @@
                     <form action = "uploader_1" method = "POST" enctype = "multipart/form-data">
                      <input type = "file" id = "file1" name = "file" />
 
-                        <p>
-                        <p>Layer numbers <input type = "text" name = "layers" /> ex) 10, 20, 30</p>
-                        <p>Temperature <input type = "text" name = "temperatures" /> ex) 210, 220, 210 (sequentially) </p>
-                        <p>Adhesion type <input type="radio" name="options" id="option1" value="blob"> Bead </input>
+                        <p>Layer numbers. ex) 10, 20, 30<input type = "text" name = "layers" /> </p>
+
+                        <p>Temperature. ex) 210, 220, 210<input type = "text" name = "temperatures" />  </p>
+
+
+                        <p>Adhesion type. <input type="radio" name="options" id="option1" value="blob"> Bead </input>
                             <input type="radio" name="options" id="option2" value="grid"> Lattice </input></p>
                         </p>
-                     <input type = "submit"/>
+
+                        <!--<p>
+                        Layer, Temperature
+                            <ul id="temp_list"></ul>
+
+                            <input type="text" id="layer" style="width:30%"/> <input type="text" id="temp"  style="width:30%"/>
+                        <br>
+                            <button onclick="addItem()" class="buttonClass">Add</button>
+                            <button onclick="removeItem()" class="buttonClass">Remove</button>
+                        </p>-->
+                        <input type = "submit"/>
+
                     </form>
+
                     </div>
+
+
                 </div>
             </div>
             <div class="accordion-group">
@@ -150,7 +166,7 @@
                      <input type = "file" id = "file2" name = "file" />
                         <br>
                         <p>
-                        <p>Adhesion type <input type="radio" name="options" id="option3" value="blob"> Bead </input>
+                        <p>Adhesion type. <input type="radio" name="options" id="option3" value="blob"> Bead </input>
                             <input type="radio" name="options" id="option4" value="grid"> Lattice </input></p>
                         </p>
                      <input type = "submit"/>
@@ -178,7 +194,7 @@
             <div class="accordion-group">
                 <div class="accordion-heading">
                     <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#fileAccordionTab">
-                        Simulate your modified file
+                        Simulate your processed file
                     </a>
                 </div>
                 <div id="fileAccordionTab" class="accordion-body collapse">
@@ -339,39 +355,38 @@
                 </div>
                 <div class="tab-pane active" id="tabAbout">
                     <div class="aboutpage">
-                        <h1>gCodeViewer</h1>
-                        <b>gCodeViewer</b> is a visual GCode visualizer, viewer and analyzer in your own browser! It works on any OS in almost any modern browser (chrome, ff, safari 6, opera, ie10 should work too). All you need to do - is drag your *.gcode file to the designated zone.<br /><br />
-                        Current features include:<br />
+                        <>h1>Multi-ttach</h1>
+                        <b>Multi-ttach</b> is a tool to modify your G-code, adding adhesion structures for multi-material 3D printing at the interface of the different materials. Based on the type of the joint between the materials, you can choose between the following 3 structures.<br />
+
                         <ul>
-                            <li>Visualize GCode in 2D, layer by layer
+                            <img src="{{url_for('static', filename='lib/Hero.jpg')}}" style="width:100%">
+                            <li>For vertically butt-jointed materials in the 3D print, you can choose between the “Bead Structure(a)” and the “Lattice Structure(b)”.
                                 <ul>
-                                    <li>Show retracts and restarts</li>
-                                    <li>Show print/move/retract speeds</li>
-                                    <li>Display only part of layer, animate sequence of layer printing</li>
-                                    <li>Show two layers simultaneously so you can check overhangs</li>
-                                    <li>Adjust line width to simulate print more closely</li>
-                                    <li><b>Gcode viewer will try to parse nozzle and filament diameters from gcode, but it may fail to do so. In that case you will need to set it manually in 'Printer Info' tab</b></li>
+                                    <li>Bead Structure modifies the infill of 4 of the interface layers, two of first material and two of the second material. It creates an interlocking structure with beads kind of like a puzzle, holding the two materials tight.</li>
+                                    <li>Lattice structure modifies the infill of 6 of the interface layers, 4 of the first material and 2 of the second material. It creates buckets with the first material that the second material fills in, again creating an interlocking structure.</li>
+
                                 </ul>
                             </li>
-                            <li>Analyze GCode
+                            <li>For horizontally butt-jointed materials in a 3D print, i.e. multiple materials printed in the same layer, you can choose to generate the “Horizontal stitching(c)”. This structure generates overlapping infills from first material to the second and vice versa creating a stitched pattern.</li>
+                            <li>To generate the modified G-code,
                                 <ul>
-                                    <li>Print time, amount of plastic used, layer height, etc. for whole file and for single layer</li>
-                                    <li>Reference visualized part to GCode file (i.e. select a certain part of 2d visualization, switch to GCode view - it will highlight list of lines responsible for visualized piece)</li>
+                                    <li>Choose the adhesion type</li>
+                                    <li>Upload the G-code generated from Cura (Currently only Cura is supported)</li>
+                                    <li>If using a single nozzle printer, use the simulation to choose the target layer for the adhesion structure for vertically butt-jointed models</li>
+                                    <li>Set the materials in order to be printed</li>
+                                    <li>The G-code file will be automatically downloaded</li>
+                                    <li>You can review the structure by uploading the downloaded G-code in the simulator.</li>
+
                                 </ul>
                             </li>
-                            <li>Multiplatform, available online (but works offline too), works locally (doesn't upload you g-code anywhere or download anything but application itself)</li>
-                            <li>3D visualization (I don't know what for, it's dull and useless.. need to rewrite it from scratch)</li>
-                            <li>And yeah, it's slow, memory hungry and only supports modern browsers</li>
-                            <li>Totally open source so you can use it as you like</li>
+
                         </ul>
                         <br /><br />
-                        All sources are available at <a href="https://github.com/hudbrog/gCodeViewer">https://github.com/hudbrog/gCodeViewer</a><br />
-                        If you find any bugs or have feature requests - don't hesitate to post them to <a href="https://github.com/hudbrog/gCodeViewer/issues">https://github.com/hudbrog/gCodeViewer/issues</a><br />
-                        And I would appreciate if you like it on Thingiverse page: <a href="http://www.thingiverse.com/thing:35248">http://www.thingiverse.com/thing:35248</a><br />
+                        This tool has been built on top of the <a href="http://gcode.ws/">gCode Viewer</a>, a tool created by Aleksey Ustyantsev. You can find the source files for the tool <a href="https://github.com/hudbrog/gCodeViewer">here</a>.
+
                     </div>
 
                 </div>
-            </div>
         </div>
     </div>
 </div>
@@ -387,5 +402,28 @@
     })();
 </script>
 
+    <script>
+        function addItem() {
+            var a = document.getElementById("temp_list");
+            var layer = document.getElementById("layer");
+            var temp = document.getElementById("temp");
+            var li = document.createElement("li");
+            li.setAttribute('id', layer.value + "," + temp.value);
+            li.appendChild(document.createTextNode(layer.value + "," + temp.value));
+            a.appendChild(li);
+        }
+
+        // Creating a function to remove item from list
+        function removeItem() {
+
+            // Declaring a varible to get select element
+            var a = document.getElementById("temp_list");
+            var layer = document.getElementById("layer");
+            var temp = document.getElementById("temp");
+            var item = document.getElementById(layer.value + "," + temp.value);
+            a.removeChild(item);
+        }
+    </script>
+</div>
 </body>
 </html>

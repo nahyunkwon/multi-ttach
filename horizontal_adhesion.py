@@ -184,6 +184,7 @@ def adhesion_structure_horizontal(file_name):
     stitches_per_layer = []
 
     dist = 0.4  # nozzle diameter, the maximum gap to find adjacent points
+    '''
 
     #----------------------------------------------
     i = 10
@@ -219,7 +220,8 @@ def adhesion_structure_horizontal(file_name):
     inner_x = []
     inner_y = []
 
-    #for point
+    #for point in all_the_points:
+
 
 
     # find material 0 - material 1 pairs
@@ -269,8 +271,8 @@ def adhesion_structure_horizontal(file_name):
 
         pairs = []
 
-        print(polygons_0)
-        print(polygons_1)
+        #print(polygons_0)
+        #print(polygons_1)
         # find material 0 - material 1 pairs
         for j in range(len(polygons_0)):
             for k in range(len(polygons_1)):
@@ -369,8 +371,6 @@ def adhesion_structure_horizontal(file_name):
 
     with open(file_name.split(".gcode")[0] + "_stitched.gcode", "w") as f:
         f.write(final)
-        
-    '''
 
 
 def generate_full_infill_for_horizontal_stitch(a_x, a_y, direction, gap=0.2):

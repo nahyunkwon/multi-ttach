@@ -12,14 +12,18 @@ from flask import Flask, render_template
 from vertical_adhesion import *
 from horizontal_adhesion import *
 
-app = Flask(__name__)
-
+app = Flask(__name__, static_url_path='')
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/about/')
+@app.route('/static/js/Worker.js')
+#def send_js():
+#    return render_template('Worker.js')
+
+#@app.route('/about/')
 def about():
     return render_template('about.html')
 
@@ -28,7 +32,6 @@ ALLOWED_EXTENSIONS = {'.gcode'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
 @app.route('/uploader_1', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -36,10 +39,13 @@ def upload_file():
         f.save("./user_files/" + secure_filename(f.filename))
 
         layers = request.form['layers']
-        materials = request.form['materials']
+        temps = request.form['temperatures']
         type = request.form['options']
 
-        print(layers, materials, type)
+        if type == 'bead':
+            type = 'blob'
+        elif type == 'lattice':
+            type = 'grid'
 
         layers_list = layers.split(",")
         
@@ -47,11 +53,21 @@ def upload_file():
         for i in range(len(layers_list)):
             layers_input.append(int(layers_list[i].strip()))
 
-        adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type)
+        temps_list = temps.split(",")
+        temps_input = []
+        for i in range(len(temps_list)):
+            temps_input.append(int(temps_list[i].strip()))
+
+        file_name = "./user_files/" + f.filename
+        adhesion_type = type
+        target_layers = layers_input
+        temps = temps_input
+        adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps)
+        #adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type, temps_input)
 
         output_file = f.filename.split(".gcode")[0]+"_"+type+".gcode"
         time.sleep(5)
-        return send_from_directory(directory="user_files", filename=output_file, as_attachment=True)
+        return send_from_directory(directory=UPLOAD_FOLDER, filename=output_file, as_attachment=True)
 
 
 @app.route('/uploader_2', methods=['GET', 'POST'])
@@ -62,7 +78,12 @@ def upload_file_2():
 
         type = request.form['options']
 
-        adhesion_structure_vertical_dual("./user_files/" + f.filename, type)
+        if type == 'bead':
+            type = 'blob'
+        elif type == 'lattice':
+            type = 'grid'
+
+        adhesion_structure_vertical_for_dual_extruder("./user_files/" + f.filename, type)
 
         output_file = f.filename.split(".gcode")[0] + "_" + type + ".gcode"
         time.sleep(5)

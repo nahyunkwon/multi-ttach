@@ -1,76 +1,429 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Multi-ttach</title>
+    <meta name="description" content="Visual GCode viewer and analyzer in your browser. No need to upload you GCode anywhere, everything is done locally. " />
+    <meta name="keywords" content="GCode,g-code,viewer,online,javascript" />
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="language" content="english" />
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="shortcut icon" type="image/vnd.microsoft.icon" href="favicon.ico" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+    <link rel="meta" type="application/rdf+xml" title="Dublin" href="/dublin.rdf" />
+    <link rel="canonical" href="http://gcode.ws/" />
 
-    <title>{% block title %} {% endblock %}</title>
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-md navbar-light bg-light">
-        <a class="navbar-brand" href="{{ url_for('index')}}">Multi-ttach</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-            <li class="nav-item active">
-                <a class="nav-link" href="{{ url_for('about')}}">About</a>
-            </li>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/cupertino/jquery-ui-1.9.0.custom.css') }}" media="screen" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap.css') }}" media="screen" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='lib/codemirror.css') }}" media="screen" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" media="screen" />
+    <script src="{{url_for('static', filename='lib/jquery-1.8.2.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/jquery-ui-1.9.0.custom.js')}}"></script>
+
+    <script src="{{url_for('static', filename='lib/codemirror.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/mode_gcode/gcode_mode.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/three.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/bootstrap.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/modernizr.custom.09684.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/TrackballControls.js')}}"></script>
+    <script src="{{url_for('static', filename='lib/zlib.min.js')}}"></script>
+    <script src="{{url_for('static', filename='js/ui.js')}}"></script>
+    <script src="{{url_for('static', filename='js/gCodeReader.js')}}"></script>
+    <script src="{{url_for('static', filename='js/renderer.js')}}"></script>
+    <script src="{{url_for('static', filename='js/analyzer.js')}}"></script>
+    <script src="{{url_for('static', filename='js/renderer3d.js')}}"></script>
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-38437619-1']);
+        _gaq.push(['_trackPageview']);
+
+        (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+
+    </script>
+
+    <meta property="og:title" content="gCodeViewer - online gcode viewer and analyzer!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="http://gcode.ws" />
+    <meta property="og:image" content="http://gcode.ws/screenshot.jpg" />
+    <meta property="og:site_name" content="Online GCode Viewer" />
+    <meta property="fb:admins" content="1537520789" />
+
+</head>
+<body>
+<div id="fb-root"></div>
+<script type="text/javascript">(function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/ru_RU/all.js#xfbml=1&appId=122261684619414";
+    fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+<div id="analysisModal" class="modal hide fade">
+    <div class="modal-header">
+        <h3>Running analysis....</h3>
+    </div>
+    <div class="modal-body">
+        <div class="progress" >
+            <div id="analysisProgress" class="bar" style="width: 0;"></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#" class="btn disabled">Please wait for process to get finished</a>
+    </div>
+</div>
+
+<div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+        <div class="container">
+            <ul class="nav">
+                <li >
+                    <a class="brand" href="#">Multi-ttach</a>
+                </li>
+            </ul>
+            <ul class="nav pull-right">
+                <li class="dropdown">
+                    <!--<a href="#"
+                       class="dropdown-toggle"
+                       data-toggle="dropdown">
+                        Spread the word
+                        <b class="caret"></b>
+                    </a>
+                    -->
+                    <ul class="dropdown-menu">
+                        <li class="socials">
+                            <div class="g-plusone" data-annotation="inline" data-width="150"></div>
+                        </li>
+                        <li class="socials"><div class="fb-like" data-href="http://gcode.ws" data-send="false" data-layout="button_count" data-width="150" data-show-faces="true" data-action="recommend"></div></li>
+                        <li class="socials"><a href="https://twitter.com/share" class="twitter-share-button" data-url="http://gcode.ws" data-text="Check out a nice online gcode viewer!">Tweet</a>
+                            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script></li>
+                    </ul>
+                </li>
             </ul>
         </div>
-    </nav>
-    <br>
-
-    <div class="container">
-
-        {% block content %} {% endblock %}
-
-        <hr>
-        <h5>1. Vertical adhesion structure (for single-extruder printer) </h5>
-        <form action = "uploader_1" method = "POST" enctype = "multipart/form-data">
-         <input type = "file" name = "file" />
-            <br>
-            <p>
-            <p>Layer numbers <input type = "text" name = "layers" /> ex) 10, 20, 30</p>
-            <p>Materials <input type = "text" name = "materials" /> ex) PLA, TPU, PLA (sequentially) </p>
-            <p>Adhesion type <input type="radio" name="options" id="option1" value="blob"> Blob </input>
-                <input type="radio" name="options" id="option2" value="grid"> Grid </input></p>
-            </p>
-         <input type = "submit"/>
-        </form>
-        <br>
-        <hr>
-        <h5>2. Vertical adhesion structure (for dual-extruder printer) </h5>
-        <form action = "uploader_2" method = "POST" enctype = "multipart/form-data">
-         <input type = "file" name = "file" />
-            <br>
-            <p>
-            <p>Adhesion type <input type="radio" name="options" id="option3" value="blob"> Blob </input>
-                <input type="radio" name="options" id="option4" value="grid"> Grid </input></p>
-            </p>
-         <input type = "submit"/>
-        </form>
-        <br>
-        <hr>
-        <h5>3. Horizontal stitching (for dual-extruder printer) </h5>
-        <form action = "uploader_3" method = "POST" enctype = "multipart/form-data">
-         <input type = "file" name = "file" />
-            <br><br>
-            <input type = "submit"/>
-        </form>
-        <br>
-        <hr>
     </div>
+</div>
 
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-  </body>
+
+<div id="wrap" class="ui-widget ui-widget-content ui-corner-all">
+    <div id="control">
+        <!--<img src="img/logo.png" alt="Multi-ttach"/>-->
+
+        <div id="accordion2" class="accordion">
+
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#adhesionTab1">
+                        Vertical adhesion structure (single-extruder)
+                    </a>
+                </div>
+                <div id="adhesionTab1" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                    <form action = "uploader_1" method = "POST" enctype = "multipart/form-data">
+                     <input type = "file" id = "file1" name = "file" />
+
+                        <p>Layer numbers. ex) 10, 20, 30<input type = "text" name = "layers" autocomplete="off"/> </p>
+
+                        <p>Temperature. ex) 210, 220, 210<input type = "text" name = "temperatures" autocomplete="off"/>  </p>
+
+
+                        <p>Adhesion type. <input type="radio" name="options" id="option1" value="blob"> Bead </input>
+                            <input type="radio" name="options" id="option2" value="grid"> Lattice </input></p>
+                        </p>
+
+                        <!--<p>
+                        Layer, Temperature
+                            <ul id="temp_list"></ul>
+
+                            <input type="text" id="layer" style="width:30%"/> <input type="text" id="temp"  style="width:30%"/>
+                        <br>
+                            <button onclick="addItem()" class="buttonClass">Add</button>
+                            <button onclick="removeItem()" class="buttonClass">Remove</button>
+                        </p>-->
+                        <input type = "submit"/>
+
+                    </form>
+
+                    </div>
+
+
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#adhesionTab2">
+                        Vertical adhesion structure (dual-extruder)
+                    </a>
+                </div>
+                <div id="adhesionTab2" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                    <form action = "uploader_2" method = "POST" enctype = "multipart/form-data">
+                     <input type = "file" id = "file2" name = "file" />
+                        <br>
+                        <p>
+                        <p>Adhesion type. <input type="radio" name="options" id="option3" value="blob"> Bead </input>
+                            <input type="radio" name="options" id="option4" value="grid"> Lattice </input></p>
+                        </p>
+                     <input type = "submit"/>
+                    </form>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#adhesionTab3">
+                        Horizontal stitching (dual-extruder)
+                    </a>
+                </div>
+                <div id="adhesionTab3" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                    <form action = "uploader_3" method = "POST" enctype = "multipart/form-data">
+                     <input type = "file" id = "file3" name = "file" />
+
+                     <input type = "submit"/>
+
+                    </form>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#fileAccordionTab">
+                        Simulate your processed file
+                    </a>
+                </div>
+                <div id="fileAccordionTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <input type = "file" id = "file0" name = "file" />
+
+                        <!--<form class="add-teacher" id="fAddTeacher" enctype="multipart/form-data" method="post" novalidate="novalidate">-->
+                        <!--<button id="selectFileButton">Select GCode File</button>-->
+                        <!--</form>-->
+                        <!--<div id="drop_zone">Drop file here</div>-->
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#progressAccordionTab">
+                        Progress indicators
+                    </a>
+                </div>
+                <div id="progressAccordionTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <div id="progressBlock">
+                            <div class="progress" >
+                                <div id="loadProgress" class="bar" style="width: 0;"></div>
+                            </div>
+                            <div class="progress" >
+                                <div id="analyzeProgress" class="bar" style="width: 0;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#infoAccordionTab">
+                        Model info
+                    </a>
+                </div>
+                <div id="infoAccordionTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <p id="list"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#layerAccordionTab">
+                        Layer Info
+                    </a>
+                </div>
+                <div id="layerAccordionTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <p id="layerInfo"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#options2DAccordionTab">
+                        2D Render options
+                    </a>
+                </div>
+                <div id="options2DAccordionTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <label>Speed display type: </label>
+                            <label for="speedDisplayRadio"><input type="radio" name="speedDisplay" id="speedDisplayRadio" value="1"  onclick="GCODE.ui.processOptions()" checked> mm/sec</label>
+                            <label for="exPerMMRadio"><input type="radio" name="speedDisplay" id="exPerMMRadio" value="1"  onclick="GCODE.ui.processOptions()" > mm extrusion per mm move</label>
+                            <label for="volPerSecRadio"><input type="radio"  name="speedDisplay" id="volPerSecRadio" value="1"  onclick="GCODE.ui.processOptions()" > mm^3/sec</label>
+                        <label for="showMovesCheckbox"><input type="checkbox" id="showMovesCheckbox" value="1"  onclick="GCODE.ui.processOptions()" checked> Show non-extrusion moves</label>
+                        <label for="showRetractsCheckbox"><input type="checkbox" id="showRetractsCheckbox" value="2" onclick="GCODE.ui.processOptions()" checked> Show retracts and restarts</label>
+                        <label for="moveModelCheckbox"><input type="checkbox" id="moveModelCheckbox" value="3"  onclick="GCODE.ui.processOptions()" checked> Move model to the center of the grid</label>
+                        <label for="differentiateColorsCheckbox"><input type="checkbox" id="differentiateColorsCheckbox" value="7"  onclick="GCODE.ui.processOptions()" checked> Show different speeds with different colors</label>
+                        <label for="thickExtrusionCheckbox"><input type="checkbox" id="thickExtrusionCheckbox" value="8"  onclick="GCODE.ui.processOptions()"> Emulate extrusion width</label>
+                        <label for="alphaCheckbox"><input type="checkbox" id="alphaCheckbox" value="10"  onclick="GCODE.ui.processOptions()" > Render lines slightly transparent</label>
+                        <!--<label for="widthModifier">Width modifier: <input type="text" value="2" id="widthModifier" onchange="GCODE.ui.processOptions()"/></label>-->
+                        <label for="showNextLayer"><input type="checkbox" id="showNextLayer" value="9"  onclick="GCODE.ui.processOptions()" > Show +1 layer</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#analyzeOptionsAccordioinTab">
+                        GCode analyzer options
+                    </a>
+                </div>
+                <div id="analyzeOptionsAccordioinTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        These require re-analyzing file:<br />
+                        <label for="sortLayersCheckbox"><input type="checkbox" id="sortLayersCheckbox" value="4" onclick="GCODE.ui.processOptions()" checked>Sort layers by Z</label>
+                        <label for="purgeEmptyLayersCheckbox"><input type="checkbox" id="purgeEmptyLayersCheckbox" value="5"  onclick="GCODE.ui.processOptions()" checked>Hide empty layers</label>
+                        <label for="showGCodeCheckbox"><input type="checkbox" id="showGCodeCheckbox" value="6" onclick="GCODE.ui.processOptions()" checked>Show GCode in GCode tab (memory intensive!)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#printerInfoAccordioinTab">
+                        Printer Info
+                    </a>
+                </div>
+                <div id="printerInfoAccordioinTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <label for="filamentDia">Plastic diameter: <input type="text" value="1.75" id="filamentDia" onchange="GCODE.ui.processOptions()"/></label>
+                        <label>Plastic type: </label>
+                            <label for="plasticABS"><input type="radio" name="radPlastic" id="plasticABS" value="ABS"  onclick="GCODE.ui.processOptions()" checked>ABS</label>
+                            <label for="plasticPLA"><input type="radio" name="radPlastic" id="plasticPLA" value="PLA"  onclick="GCODE.ui.processOptions()" >PLA</label>
+                        <label for="nozzleDia">Nozzle size: <input type="text" value="0.4" id="nozzleDia" onchange="GCODE.ui.processOptions()"/></label>
+						<label for="volumetricE"><input type="checkbox" id="volumetricE" onclick="GCODE.ui.processOptions()"> Volumetric E</label>
+                        <label for="hourlyCost">Printer hourly cost: <input type="text" value="1.00" id="hourlyCost" onchange="GCODE.ui.processOptions()"/></label>
+                        <label for="filamentPrice">Filament price(per gram): <input type="text" value="0.05" id="filamentPrice" onchange="GCODE.ui.processOptions()"/></label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-group hide" id="errAnalyseTab">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#errorAnalysisAccordioinTab">
+                        Error Analysis
+                    </a>
+                </div>
+                <div id="errorAnalysisAccordioinTab" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        <button class="btn disabled" id="runAnalysisButton" onclick="GCODE.analyzer.runAnalyze()"/>Run analysis</button>
+                        <div id="analysisOptionsDiv" class="hide">
+                            <label for="renderErrors"><input type="checkbox" id="renderErrors" onclick="GCODE.ui.processOptions()">Render error analysis results</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+        <output id="errorList"></output>
+
+
+    </div>
+    <div id="gcode">
+        <div id="tabs-min" class="tabbable">
+            <ul id="myTab" class="nav nav-tabs">
+                <li class=""><a href="#tab2d" data-toggle="tab">2D</a></li>
+                <li class=""><a href="#tab3d" data-toggle="tab">3D</a></li>
+                <li class=""><a href="#tabGCode" data-toggle="tab">GCode</a></li>
+                <li class="active"><a href="#tabAbout" data-toggle="tab">About</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane" id="tab2d">
+                    <canvas id="canvas" width="650" height="620"></canvas>
+                    <div id="slider-vertical"></div>
+                    <div id="slider-horizontal"></div>
+                </div>
+                <div class="tab-pane" id="tab3d">
+                    <div id="3d_container"></div>
+                </div>
+                <div class="tab-pane" id="tabGCode">
+                    <div id="gCodeContainer"></div>
+                </div>
+                <div class="tab-pane active" id="tabAbout">
+                    <div class="aboutpage">
+                        <>h1>Multi-ttach</h1>
+                        <b>Multi-ttach</b> is a tool to modify your G-code, adding adhesion structures for multi-material 3D printing at the interface of the different materials. Based on the type of the joint between the materials, you can choose between the following 3 structures.<br />
+
+                        <ul>
+                            <img src="{{url_for('static', filename='lib/Hero.jpg')}}" style="width:100%">
+                            <li>For vertically butt-jointed materials in the 3D print, you can choose between the “Bead Structure(a)” and the “Lattice Structure(b)”.
+                                <ul>
+                                    <li>Bead Structure modifies the infill of 4 of the interface layers, two of first material and two of the second material. It creates an interlocking structure with beads kind of like a puzzle, holding the two materials tight.</li>
+                                    <li>Lattice structure modifies the infill of 6 of the interface layers, 4 of the first material and 2 of the second material. It creates buckets with the first material that the second material fills in, again creating an interlocking structure.</li>
+
+                                </ul>
+                            </li>
+                            <li>For horizontally butt-jointed materials in a 3D print, i.e. multiple materials printed in the same layer, you can choose to generate the “Horizontal stitching(c)”. This structure generates overlapping infills from first material to the second and vice versa creating a stitched pattern.</li>
+                            <li>To generate the modified G-code,
+                                <ul>
+                                    <li>Choose the adhesion type</li>
+                                    <li>Upload the G-code generated from Cura (Currently only Cura is supported)</li>
+                                    <li>If using a single nozzle printer, use the simulation to choose the target layer for the adhesion structure for vertically butt-jointed models</li>
+                                    <li>Set the materials in order to be printed</li>
+                                    <li>The G-code file will be automatically downloaded</li>
+                                    <li>You can review the structure by uploading the downloaded G-code in the simulator.</li>
+
+                                </ul>
+                            </li>
+
+                        </ul>
+                        <br /><br />
+                        This tool has been built on top of the <a href="http://gcode.ws/">gCode Viewer</a>, a tool created by Aleksey Ustyantsev. You can find the source files for the tool <a href="https://github.com/hudbrog/gCodeViewer">here</a>.
+
+                    </div>
+
+                </div>
+        </div>
+    </div>
+</div>
+<script>
+    GCODE.ui.initHandlers();
+</script>
+
+<script type="text/javascript">
+    (function() {
+        var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+        po.src = 'https://apis.google.com/js/plusone.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+    })();
+</script>
+
+    <script>
+        function addItem() {
+            var a = document.getElementById("temp_list");
+            var layer = document.getElementById("layer");
+            var temp = document.getElementById("temp");
+            var li = document.createElement("li");
+            li.setAttribute('id', layer.value + "," + temp.value);
+            li.appendChild(document.createTextNode(layer.value + "," + temp.value));
+            a.appendChild(li);
+        }
+
+        // Creating a function to remove item from list
+        function removeItem() {
+
+            // Declaring a varible to get select element
+            var a = document.getElementById("temp_list");
+            var layer = document.getElementById("layer");
+            var temp = document.getElementById("temp");
+            var item = document.getElementById(layer.value + "," + temp.value);
+            a.removeChild(item);
+        }
+    </script>
+</div>
+</body>
 </html>

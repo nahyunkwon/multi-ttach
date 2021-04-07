@@ -62,7 +62,7 @@ def upload_file():
         adhesion_type = type
         target_layers = layers_input
         temps = temps_input
-        adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder=1)
+        adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps)
         #adhesion_structure_vertical("./user_files/" + f.filename, layers_input, type, temps_input)
 
         output_file = f.filename.split(".gcode")[0]+"_"+type+".gcode"

@@ -454,16 +454,14 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
                 if unit_square_is_included(a_coords[i], gap, a_coords):
                     b_x.append(a_coords[i][0] + gap / 2)
                     b_y.append(a_coords[i][1] + gap / 2)
+            '''
+            plt.plot(x_values, y_values, 'ro', markersize=3)
 
-            # plt.plot(x_values, y_values, linewidth=0.2)
-
-            plt.plot(a_x, a_y, 'ro', markersize=0.2)
-            plt.plot(b_x, b_y, 'go', markersize=0.2)
-
+            plt.plot(a_x, a_y, 'bo', markersize=3)
+            plt.plot(b_x, b_y, 'go', markersize=3)
+            plt.autoscale()
             #plt.plot(no_x, no_y, 'bo', markersize=0.2)
-            plt.show()
-            return
-
+            '''
             set_a_x.append(a_x)
             set_a_y.append(a_y)
             set_b_x.append(b_x)
@@ -484,6 +482,9 @@ def get_grid_points_for_target_layer(file, target_layer, gap):
     #    plt.plot(set_b_x[i], set_b_y[i], 'ro')
 
     #plt.show()
+
+    #plt.show()
+    #return
 
     return set_a_x, set_a_y, set_b_x, set_b_y
 
@@ -988,7 +989,7 @@ def find_target_layers_for_dual_extruder(filename):
     return target_l
 
 
-def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, no_extruder=1):
+def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps):
     """
     Generate adhesion structure for vertical adhesion
     :param file_name: source gcode file
@@ -1005,12 +1006,12 @@ def adhesion_structure_vertical(file_name, adhesion_type, target_layers, temps, 
     #temps = temps[1:]
 
     # the first interface
-    replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temps[0], no_extruder, flag=0)
+    replace_infill_to_adhesion_structure(file_name, target_layers[0], adhesion_type, temps[0], no_extruder=1, flag=0)
 
     if len(target_layers) > 1:  # muptiple interfaces
         for i in range(1, len(target_layers)):
             replace_infill_to_adhesion_structure(file_name.split(".gcode")[0] + "_" + adhesion_type + ".gcode",
-                                                 target_layers[i], adhesion_type, temps[i], no_extruder, flag=1)
+                                                 target_layers[i], adhesion_type, temps[i], no_extruder=1, flag=1)
 
 
 def adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_extruder=2):
@@ -1061,9 +1062,11 @@ if __name__ == "__main__":
     adhesion_structure_vertical_for_dual_extruder(file_name, adhesion_type, no_extruder=2)
     #replace_infill_to_adhesion_structure(file_name, 41, 'blob', temp=-1, no_extruder=2, flag=0)
     '''
-    file_dir = "/Users/kwon/PycharmProjects/digital_fabrication_studio/"
-    file_name = "./gcode/CE3_brick.gcode"
-    replace_infill_to_adhesion_structure(file_name, 55, 'grid', 210, no_extruder=1, flag=0)
+    #file_dir = "/Users/kwon/PycharmProjects/digital_fabrication_studio/"
+    file_name = "./gcode/flipflop_15.gcode"
+    adhesion_structure_vertical(file_name, 'grid', [30, 50], [-1, -1])
+    #replace_infill_to_adhesion_structure(file_name, 30, 'grid', 127, no_extruder=1, flag=0)
+    #replace_infill_to_adhesion_structure(file_name, 50, 'grid', 127, no_extruder=1, flag=1)
 
     #replace_infill_to_adhesion_structure(file_name, 20, 'grid', 210, no_extruder=1, flag=0)
     #replace_infill_to_adhesion_structure(file_name, 20, 'blob', 210, no_extruder=1, flag=0)
